@@ -24,6 +24,12 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     return <Navigate to="/login" replace />;
   }
 
+  if (user.role === 'BusinessAdmin' && (!user.verificationStatus || user.verificationStatus !== 'Approved')) {
+    if (location.pathname !== '/business/pending-verification') {
+      return <Navigate to="/business/pending-verification" replace />;
+    }
+  }
+
   if (allowedRoles && !allowedRoles.includes(user.role)) {
 
     if (user.role === 'Superadmin') return <Navigate to="/superadmin" replace />;

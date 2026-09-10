@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Skeleton, Box, Card, Typography, Grid, Alert, IconButton, Divider, Chip, List, ListItem, ListItemText, ListItemAvatar } from '@mui/material';
+import { Skeleton, Box, Card, Typography, Grid, Alert, IconButton, Divider, Chip, List, ListItem, ListItemText, ListItemAvatar, Button } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DirectionsWalkIcon from '@mui/icons-material/DirectionsWalk';
@@ -115,6 +115,11 @@ export default function BusinessDashboard() {
 
   return (
     <Box>
+      {stats?.trialStatus === "Active" && (
+        <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+          You are on a free trial of the <b>{stats.planName}</b> plan — ends in {stats.trialDaysLeft} day(s).
+        </Alert>
+      )}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', mb: 3 }}>
         <Box>
           <Typography variant="h4" sx={{fontWeight: 700}} color="primary" gutterBottom>
@@ -155,7 +160,7 @@ export default function BusinessDashboard() {
         </Alert>
       )}
 
-      <Grid container spacing={3}>
+      <Grid container spacing={3} id="tour-kpi">
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <KpiCard 
             loading={loading}
@@ -258,7 +263,7 @@ export default function BusinessDashboard() {
         </Grid>
         
         <Grid size={{ xs: 12, md: 5 }}>
-          <Card sx={{ p: 3, height: '100%', minHeight: 400, display: 'flex', flexDirection: 'column', borderRadius: 4 }}>
+          <Card id="tour-appointments" sx={{ p: 3, height: '100%', minHeight: 400, display: 'flex', flexDirection: 'column', borderRadius: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6" sx={{fontWeight: 700}}>Recent Bookings</Typography>
               <InfoTooltip title="The last 5 bookings made by your customers" />
@@ -267,7 +272,7 @@ export default function BusinessDashboard() {
             {loading ? <Skeleton variant="rounded" height={300} sx={{ borderRadius: 2 }} /> : (
               <Box sx={{ flexGrow: 1 }}>
                 <List sx={{ width: '100%' }}>
-                  {stats?.recentBookings?.map((app: any, idx: number) => (
+                  {stats?.recentBookings?.length > 0 ? stats.recentBookings.map((app: any, idx: number) => (
                     <Box key={app._id}>
                       <ListItem alignItems="flex-start" sx={{ px: 0 }}>
                         <ListItemText
@@ -289,7 +294,14 @@ export default function BusinessDashboard() {
                       </ListItem>
                       {idx < stats.recentBookings.length - 1 && <Divider component="li" /> }
                     </Box>
-                  ))}
+                  )) : (
+                    <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
+                      <Typography variant="body1" sx={{ mb: 2 }}>You don't have any recent bookings yet.</Typography>
+                      <Button variant="outlined" color="primary" href={`/b/${stats?.slug}`} target="_blank">
+                        View Your Public Page
+                      </Button>
+                    </Box>
+                  )}
                 </List>
               </Box>
             )}

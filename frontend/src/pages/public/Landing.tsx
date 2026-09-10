@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Box, Typography, Button, Container, Grid, Card, Chip, Paper, Avatar,
-  Accordion, AccordionSummary, AccordionDetails, Rating, Skeleton,
-  Divider, List, ListItem, ListItemIcon, ListItemText
+  Box, Typography, Button, Container, Grid, Card, Chip, Paper,
+  Accordion, AccordionSummary, AccordionDetails, Skeleton, List, ListItem, ListItemIcon, ListItemText
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hook';
 import { fetchPublicPlans } from '../../features/public/publicSlice';
-import api from '../../services/api';
+
 import { motion, AnimatePresence, useInView, animate, useMotionValue, useTransform } from 'framer-motion';
 
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
@@ -23,7 +22,9 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import CloseIcon from '@mui/icons-material/Close';
 import { type Variants } from 'framer-motion';
+import BookDemoModal from '../../components/auth/BookDemoModal';
 
 
 function Counter({ value, suffix = '', duration = 1.8 }: { value: number; suffix?: string; duration?: number }) {
@@ -421,7 +422,7 @@ function PricingSection() {
                       color="primary"
                       fullWidth
                       size="large"
-                      onClick={() => navigate('/login')}
+                      onClick={() => navigate('/register')}
                       sx={{ mb: 4, fontWeight: 700, borderRadius: 2 }}
                     >
                       {plan.price === 0 ? 'Get Started' : 'Start Free Trial'}
@@ -483,8 +484,97 @@ function PricingSection() {
   );
 }
 
+function TheDifference() {
+  const without = [
+    'Playing phone tag and sending WhatsApp messages back and forth to find a time.',
+    'Losing revenue every week because customers forget their appointments and don\'t show up.',
+    'Scrambling to remember client details, past services, or important notes.',
+    'Constantly interrupting your flow to answer the phone or reply to booking DMs.',
+  ];
+
+  const withSlotify = [
+    'Your custom booking link lets customers easily schedule themselves 24/7.',
+    'Automated, polite SMS & Email reminders practically eliminate no-shows.',
+    'A built-in digital CRM securely stores all client history in one tap.',
+    'Focus 100% on delivering your service while the app handles the admin work.',
+  ];
+
+  return (
+    <Box sx={{ py: { xs: 9, md: 13 }, bgcolor: '#f8fafc' }}>
+      <Container maxWidth="lg">
+        <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }} variants={fadeUp}>
+          <Box sx={{ textAlign: 'center', mb: 7 }}>
+            <EyebrowChip label="THE PROBLEM" />
+            <Typography variant="h3" sx={{ fontWeight: 800, fontSize: { xs: '1.9rem', md: '2.4rem' } }}>
+              The old way of booking is broken
+            </Typography>
+            <Typography variant="h6" color="textSecondary" sx={{ mt: 2, maxWidth: 650, mx: 'auto', fontWeight: 400 }}>
+              Local businesses are losing hours every week to manual scheduling chaos. It's time to level the playing field.
+            </Typography>
+          </Box>
+        </motion.div>
+
+        <Grid container spacing={4}>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
+              <Card sx={{ p: { xs: 4, md: 5 }, height: '100%', borderRadius: 4, borderTop: '6px solid #ef4444', bgcolor: 'white', boxShadow: '0 12px 30px rgba(15,23,42,0.04)' }}>
+                <Typography variant="h5" sx={{ fontWeight: 800, mb: 4, color: '#ef4444' }}>Without Us</Typography>
+                <List sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {without.map((text, i) => (
+                    <ListItem key={i} disablePadding sx={{ alignItems: 'flex-start' }}>
+                      <ListItemIcon sx={{ minWidth: 36, mt: 0.3 }}><CloseIcon sx={{ color: '#ef4444' }} /></ListItemIcon>
+                      <ListItemText primary={<Typography sx={{ color: 'text.secondary', fontWeight: 500, lineHeight: 1.6 }}>{text}</Typography>} />
+                    </ListItem>
+                  ))}
+                </List>
+              </Card>
+            </motion.div>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 6 }}>
+            <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.1 }}>
+              <Card sx={{ p: { xs: 4, md: 5 }, height: '100%', borderRadius: 4, borderTop: '6px solid', borderColor: 'primary.main', bgcolor: 'rgba(101,146,135,0.03)', boxShadow: '0 12px 30px rgba(15,23,42,0.06)' }}>
+                <Typography variant="h5" sx={{ fontWeight: 800, mb: 4, color: 'primary.main' }}>With Slotify</Typography>
+                <List sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {withSlotify.map((text, i) => (
+                    <ListItem key={i} disablePadding sx={{ alignItems: 'flex-start' }}>
+                      <ListItemIcon sx={{ minWidth: 36, mt: 0.3 }}><CheckCircleIcon color="primary" /></ListItemIcon>
+                      <ListItemText primary={<Typography sx={{ color: 'text.primary', fontWeight: 600, lineHeight: 1.6 }}>{text}</Typography>} />
+                    </ListItem>
+                  ))}
+                </List>
+              </Card>
+            </motion.div>
+          </Grid>
+        </Grid>
+      </Container>
+    </Box>
+  );
+}
+
+function VisionSection() {
+  return (
+    <Box sx={{ py: { xs: 9, md: 12 }, bgcolor: 'white', textAlign: 'center', borderTop: '1px solid #e2e8f0' }}>
+      <Container maxWidth="md">
+        <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }} variants={fadeUp}>
+          <Typography variant="h3" sx={{ fontWeight: 800, fontSize: { xs: '2rem', md: '2.8rem' }, mb: 3 }}>
+            Our Mission is to Empower Local Service Businesses
+          </Typography>
+          <Typography variant="h6" color="textSecondary" sx={{ fontWeight: 400, lineHeight: 1.7, mb: 4 }}>
+            For too long, powerful booking and scheduling software has been expensive and overly complicated. We built Slotify with a singular vision: to give local businesses—salons, tutors, mechanics, and consultants—the exact same digital superpowers as large enterprises, but in a package that takes 5 minutes to set up.
+          </Typography>
+          <Typography variant="h6" color="textSecondary" sx={{ fontWeight: 400, lineHeight: 1.7 }}>
+            When local businesses run smoothly without manual chaos, communities thrive. We're here to level the playing field.
+          </Typography>
+        </motion.div>
+      </Container>
+    </Box>
+  );
+}
+
 export default function Landing() {
   const navigate = useNavigate();
+  const [demoModalOpen, setDemoModalOpen] = useState(false);
 
   return (
     <Box sx={{ overflowX: 'hidden' }}>
@@ -493,48 +583,28 @@ export default function Landing() {
           <Grid container spacing={6} sx={{ alignItems: 'center' }}>
             <Grid size={{ xs: 12, md: 6 }}>
               <motion.div initial="hidden" animate="show" variants={fadeUp}>
-                <Chip
-                  icon={<AutoAwesomeIcon sx={{ fontSize: '16px !important' }} />}
-                  label="New: automatic Google Meet links on every booking"
-                  size="small"
-                  sx={{ mb: 3, fontWeight: 700, bgcolor: 'rgba(101,146,135,0.1)', color: 'primary.dark', px: 1 }}
-                />
-                <Typography variant="h2" component="h1" gutterBottom color="text.primary" sx={{ fontWeight: 800, lineHeight: 1.08, fontSize: { xs: '2.4rem', sm: '3rem', md: '3.4rem' } }}>
-                  Stop losing bookings to <Box component="span" color="primary.main">missed calls</Box>.
+                <Typography variant="h1" sx={{ fontSize: { xs: '2.5rem', md: '3.75rem' }, lineHeight: 1.1, mb: 3, letterSpacing: '-0.02em', color: '#0f172a' }}>
+                  Turn website visitors into <span style={{ color: '#659287' }}>paying customers.</span>
                 </Typography>
-                <Typography variant="h6" color="textSecondary" component="p" sx={{ mb: 4, fontWeight: 400, maxWidth: 480 }}>
-                  Slotify gives your business a booking page that works while you sleep — synced to your real calendar, with Meet links, reminders and walk-ins handled for you.
+                <Typography variant="h6" sx={{ color: '#475569', mb: 4, fontWeight: 400, lineHeight: 1.6, maxWidth: 500 }}>
+                  Automate your scheduling, reduce no-shows with reminders, and manage your team from one simple dashboard.
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 4 }}>
                   <Button
                     variant="contained" color="primary" size="large"
                     endIcon={<ArrowForwardIcon />}
-                    onClick={() => navigate('/login')}
+                    onClick={() => navigate('/register')}
                     sx={{ px: 4, py: 1.6, fontSize: '1.05rem', fontWeight: 700 }}
                   >
-                    Start free — takes 5 minutes
+                    Start free – takes 5 minutes
                   </Button>
                   <Button
                     variant="outlined" color="primary" size="large"
-                    href="#demo"
+                    onClick={() => setDemoModalOpen(true)}
                     sx={{ px: 4, py: 1.6, fontSize: '1.05rem', fontWeight: 700 }}
                   >
-                    See how it works
+                    Book a Demo
                   </Button>
-                </Box>
-
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Box sx={{ display: 'flex' }}>
-                    {['https://randomuser.me/api/portraits/women/68.jpg', 'https://randomuser.me/api/portraits/men/32.jpg', 'https://randomuser.me/api/portraits/women/44.jpg'].map((src, i) => (
-                      <Avatar key={i} src={src} sx={{ width: 34, height: 34, ml: i === 0 ? 0 : -1.2, border: '2px solid white' }} />
-                    ))}
-                  </Box>
-                  <Box>
-                    <Rating value={5} readOnly size="small" />
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                      Trusted by 500+ businesses
-                    </Typography>
-                  </Box>
                 </Box>
               </motion.div>
             </Grid>
@@ -614,6 +684,8 @@ export default function Landing() {
 
       <Marquee />
 
+      <TheDifference />
+
       <Box id="demo" sx={{ py: { xs: 9, md: 13 }, bgcolor: 'white' }}>
         <Container maxWidth="lg">
           <BookingDemo />
@@ -643,7 +715,7 @@ export default function Landing() {
         </Container>
       </Box>
 
-      <Container maxWidth="lg" sx={{ py: { xs: 9, md: 13 } }}>
+      <Container id="solutions" maxWidth="lg" sx={{ py: { xs: 9, md: 13 } }}>
         <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }} variants={fadeUp}>
           <Box sx={{ textAlign: 'center', mb: 6 }}>
             <EyebrowChip label="WHO IT'S FOR" />
@@ -683,7 +755,7 @@ export default function Landing() {
         </Grid>
       </Container>
 
-      <Box sx={{ bgcolor: '#f8fafc', py: { xs: 9, md: 13 } }}>
+      <Box id="features" sx={{ bgcolor: '#f8fafc', py: { xs: 9, md: 13 } }}>
         <Container maxWidth="lg">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }} variants={fadeUp}>
             <Box sx={{ textAlign: 'center', mb: 6 }}>
@@ -767,7 +839,7 @@ export default function Landing() {
         </Box>
       </Container>
 
-      <Box sx={{ bgcolor: '#f8fafc', py: { xs: 9, md: 13 } }}>
+      {/* <Box sx={{ bgcolor: '#f8fafc', py: { xs: 9, md: 13 } }}>
         <Container maxWidth="lg">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }} variants={fadeUp}>
             <Box sx={{ textAlign: 'center', mb: 6 }}>
@@ -806,9 +878,9 @@ export default function Landing() {
             ))}
           </Grid>
         </Container>
-      </Box>
+      </Box> */}
 
-      <Container maxWidth="md" sx={{ py: { xs: 9, md: 13 } }}>
+      <Container id="resources" maxWidth="md" sx={{ py: { xs: 9, md: 13 } }}>
         <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }} variants={fadeUp}>
           <Box sx={{ textAlign: 'center', mb: 5 }}>
             <EyebrowChip label="QUESTIONS" />
@@ -838,6 +910,8 @@ export default function Landing() {
         ))}
       </Container>
 
+      <VisionSection />
+
       <Box sx={{
         position: 'relative', py: { xs: 10, md: 14 },
         backgroundImage: 'url(https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1600&q=80&auto=format&fit=crop), linear-gradient(135deg,#4a6b62,#659287)',
@@ -855,7 +929,7 @@ export default function Landing() {
             <Button
               variant="contained" color="primary" size="large"
               endIcon={<ArrowForwardIcon />}
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/register')}
               sx={{ px: 5, py: 1.7, fontSize: '1.1rem', fontWeight: 700, mb: 4 }}
             >
               Start free — no credit card needed
@@ -871,6 +945,7 @@ export default function Landing() {
           </motion.div>
         </Container>
       </Box>
+      <BookDemoModal open={demoModalOpen} onClose={() => setDemoModalOpen(false)} />
     </Box>
   );
 }

@@ -27,6 +27,7 @@ export default function Settings() {
   const dispatch = useAppDispatch();
   const { settingsData: data, settingsLoading, services, servicesLoading } = useAppSelector((state) => state.business);
   const { plans, plansLoading } = useAppSelector((state) => state.public);
+  const { user } = useAppSelector((state) => state.auth);
   const [loading, setLoading] = useState(false);
 
   const [bookingUrl, setBookingUrl] = useState('');
@@ -221,14 +222,27 @@ export default function Settings() {
                   <Typography variant="h4" sx={{ fontWeight: 800 }}>
                     {data?.business?.planId?.name || 'Free'}
                   </Typography>
-                  <Chip label="Active" color="success" size="small" />
+                  <Chip 
+                    label={data?.business?.trialStatus === 'Active' ? 'Trial Active' : 'Active'} 
+                    color={data?.business?.trialStatus === 'Active' ? 'secondary' : 'success'} 
+                    size="small" 
+                  />
                 </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  {data?.business?.planId?.price === 0 ? 'Free forever' : `₹${data?.business?.planId?.price} / month`}
+                  {data?.business?.trialStatus === 'Active' 
+                    ? `Premium Trial` 
+                    : (!data?.business?.planId || data.business.planId.price === 0 ? 'Free forever' : `\u20B9${data.business.planId.price} / month`)}
                 </Typography>
-                <Button variant="contained" color="primary" onClick={() => setUpgradeModalOpen(true)}>
-                  Upgrade Plan
-                </Button>
+                
+                {data?.business?.trialStatus === 'Active' ? (
+                  <Typography variant="body2" color="secondary" sx={{ fontStyle: 'italic' }}>
+                    Your trial ends in {Math.max(0, Math.ceil((new Date(data.business.trialEndsAt).getTime() - new Date().getTime()) / 86400000))} days. Please contact support to upgrade.
+                  </Typography>
+                ) : (
+                  <Button variant="contained" color="primary" onClick={() => setUpgradeModalOpen(true)}>
+                    Upgrade Plan
+                  </Button>
+                )}
               </Box>
 
               <Box sx={{ flex: 1, minWidth: 200 }}>
@@ -377,7 +391,9 @@ export default function Settings() {
             <Divider sx={{ mb: 3 }} />
             {isGoogleConnected ? (
               <Alert severity="success" sx={{ mb: 3 }}>
-                Your Google Calendar is successfully connected! Availability is synced and Google Meet links will be generated automatically.
+                {user?.isDemoAccount 
+                  ? 'Connected to: demo.salon@gmail.com (Simulated Demo Mode)'
+                  : 'Your Google Calendar is successfully connected! Availability is synced and Google Meet links will be generated automatically.'}
               </Alert>
             ) : (
               <>

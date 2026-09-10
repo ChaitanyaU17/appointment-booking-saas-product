@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Skeleton, Box, Typography, Container, Card, Grid, Button, TextField, CircularProgress, Dialog, DialogTitle, DialogContent, IconButton, MenuItem, useMediaQuery, useTheme } from '@mui/material';
+import { Skeleton, Box, Typography, Container, Card, Grid, Button, TextField, CircularProgress, 
+Dialog, DialogTitle, DialogContent, IconButton, MenuItem, useMediaQuery, useTheme } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
@@ -77,6 +78,16 @@ export default function PublicBooking() {
         .required('Required'),
       title: Yup.string().required('Required'),
       type: Yup.string().required('Required'),
+      serviceId: Yup.string().test(
+        'required-if-services-exist',
+        'Please select a service',
+        function (value) {
+          if (business && business.services && business.services.length > 0) {
+            return !!value;
+          }
+          return true;
+        }
+      ),
     }),
     onSubmit: async (values) => {
       if (!selectedSlot || !slug) return;
@@ -309,7 +320,7 @@ export default function PublicBooking() {
                   <Typography variant="body1" gutterBottom sx={{ mb: 3 }}>
                     You must be signed in to book an appointment.
                   </Typography>
-                  <Button variant="contained" onClick={handleGoogleLogin}>
+                  <Button variant="contained" sx={{backgroundColor: 'white', color: '#000'}} onClick={handleGoogleLogin}>
                     <GoogleIcon sx={{backgroundColor: 'transparent', mr: 1, fontSize: 20 }} />
                     Sign in with Google
                   </Button>

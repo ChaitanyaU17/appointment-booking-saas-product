@@ -11,7 +11,8 @@ import {
   getServices,
   createService,
   updateService,
-  deleteService
+  deleteService,
+  resubmitVerification
 } from '../controllers/businessController';
 import { protect } from '../middlewares/authMiddleware';
 import { isBusinessAdmin } from '../middlewares/roleMiddleware';
@@ -21,6 +22,7 @@ const router = express.Router();
 router.use(protect, isBusinessAdmin);
 
 router.get('/dashboard', getBusinessDashboardStats);
+router.put('/resubmit', resubmitVerification);
 
 router.route('/settings')
   .get(getBusinessSettings)

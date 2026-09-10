@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { 
-  fetchPublicBusinessApi, fetchPublicSlotsApi, fetchMyAppointmentsApi, bookAppointmentApi, publicGoogleLoginApi, fetchPublicPlansApi
+  fetchPublicBusinessApi, fetchPublicSlotsApi, fetchMyAppointmentsApi, bookAppointmentApi, publicGoogleLoginApi, fetchPublicPlansApi, createDemoRequestApi
 } from "./publicApi";
 
 interface IPublicState {
@@ -107,6 +107,18 @@ export const fetchPublicPlans = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await fetchPublicPlansApi();
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const createDemoRequest = createAsyncThunk(
+  'public/createDemoRequest',
+  async (data: any, { rejectWithValue }) => {
+    try {
+      const response = await createDemoRequestApi(data);
       return response;
     } catch (error: any) {
       return rejectWithValue(error?.response?.data?.message || error?.message);

@@ -8,6 +8,9 @@ import EventIcon from '@mui/icons-material/Event';
 import SettingsIcon from '@mui/icons-material/Settings';
 import CardMembershipIcon from '@mui/icons-material/CardMembership';
 
+import HowToRegIcon from '@mui/icons-material/HowToReg';
+import PeopleIcon from '@mui/icons-material/People';
+
 export const drawerWidth = 240;
 
 interface SidebarProps {
@@ -24,8 +27,11 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
   const superadminLinks = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/superadmin' },
-    { text: 'Businesses', icon: <StoreIcon />, path: '/superadmin/businesses' },
+    { text: 'Registration', icon: <HowToRegIcon />, path: '/superadmin/registration' },
+    { text: 'Onboarded Shops', icon: <StoreIcon />, path: '/superadmin/shops' },
+    { text: 'Business Admins', icon: <PeopleIcon />, path: '/superadmin/admins' },
     { text: 'Plans', icon: <CardMembershipIcon />, path: '/superadmin/plans' },
+    { text: 'Demo Requests', icon: <EventIcon />, path: '/superadmin/demo-requests' },
   ];
 
   const businessLinks = [
@@ -46,7 +52,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
           {links.map((link) => {
             const active = location.pathname === link.path;
             return (
-              <ListItem key={link.text} disablePadding sx={{ mb: 0.5 }}>
+              <ListItem key={link.text} disablePadding sx={{ mb: 0.5 }} id={`tour-nav-${link.text.toLowerCase().replace(/\s+/g, '-')}`}>
                 <ListItemButton
                   selected={active}
                   onClick={() => { navigate(link.path); onClose(); }}

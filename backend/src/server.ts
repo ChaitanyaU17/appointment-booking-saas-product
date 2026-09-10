@@ -32,8 +32,11 @@ const bootstrapSuperadmin = async () => {
   }
 };
 
+import { startTrialExpiryJob } from './jobs/trialExpiryJob';
+
 connectDB().then(async () => {
   await bootstrapSuperadmin();
+  startTrialExpiryJob();
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });

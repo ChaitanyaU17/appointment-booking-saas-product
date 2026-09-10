@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import { loginApi, googleLoginApi, fetchSessionApi, logoutApi } from './authApi';
+import { loginApi, googleLoginApi, fetchSessionApi, logoutApi, registerApi } from './authApi';
 
 export interface User {
   _id: string;
@@ -7,6 +7,8 @@ export interface User {
   email: string;
   role: string;
   businessId?: string;
+  verificationStatus?: 'Pending' | 'ChangesRequested' | 'Approved' | 'Rejected';
+  isDemoAccount?: boolean;
 }
 
 interface AuthState {
@@ -28,6 +30,7 @@ export const logoutThunk = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       await logoutApi();
+      localStorage.removeItem('demoTourCompleted');
       return true;
     } catch (error: any) {
       return rejectWithValue(error?.response?.data?.message || error?.message);
@@ -52,6 +55,31 @@ export const loginThunk = createAsyncThunk(
   async (data: any, { rejectWithValue }) => {
     try {
       const response = await loginApi(data);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const demoLoginThunk = createAsyncThunk(
+  'auth/demoLogin',
+  async (_, { rejectWithValue }) => {
+    try {
+      const { demoLoginApi } = await import('./authApi');
+      const response = await demoLoginApi();
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const registerThunk = createAsyncThunk(
+  'auth/register',
+  async (data: any, { rejectWithValue }) => {
+    try {
+      const response = await registerApi(data);
       return response;
     } catch (error: any) {
       return rejectWithValue(error?.response?.data?.message || error?.message);
@@ -104,6 +132,32 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
       })
       .addCase(loginThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.loginError = action.payload;
+      })
+      .addCase(demoLoginThunk.pending, (state) => {
+        state.loading = true;
+        state.loginError = null;
+      })
+      .addCase(demoLoginThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload;
+        state.isAuthenticated = true;
+      })
+      .addCase(demoLoginThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.loginError = action.payload;
+      })
+      .addCase(registerThunk.pending, (state) => {
+        state.loading = true;
+        state.loginError = null;
+      })
+      .addCase(registerThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload;
+        state.isAuthenticated = true;
+      })
+      .addCase(registerThunk.rejected, (state, action) => {
         state.loading = false;
         state.loginError = action.payload;
       })

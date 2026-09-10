@@ -8,7 +8,15 @@ import {
   getBusinessAdmins,
   createBusinessAdmin,
   updateBusinessAdmin,
-  deleteBusinessAdmin
+  deleteBusinessAdmin,
+  approveBusiness,
+  rejectBusiness,
+  requestBusinessChanges,
+  activateTrial,
+  getDemoRequests,
+  approveDemoRequest,
+  rejectDemoRequest,
+  deleteDemoRequest
 } from '../controllers/superadminController';
 import { protect } from '../middlewares/authMiddleware';
 import { isSuperadmin } from '../middlewares/roleMiddleware';
@@ -27,6 +35,11 @@ router.route('/businesses/:id')
   .put(updateBusiness)
   .delete(deleteBusiness);
 
+router.put('/businesses/:id/approve', approveBusiness);
+router.put('/businesses/:id/reject', rejectBusiness);
+router.put('/businesses/:id/request-changes', requestBusinessChanges);
+router.put('/businesses/:id/activate-trial', activateTrial);
+
 router.route('/admins')
   .get(getBusinessAdmins)
   .post(createBusinessAdmin);
@@ -34,5 +47,10 @@ router.route('/admins')
 router.route('/admins/:id')
   .put(updateBusinessAdmin)
   .delete(deleteBusinessAdmin);
+
+router.get('/demo-requests', getDemoRequests);
+router.put('/demo-requests/:id/approve', approveDemoRequest);
+router.put('/demo-requests/:id/reject', rejectDemoRequest);
+router.delete('/demo-requests/:id', deleteDemoRequest);
 
 export default router;

@@ -29,3 +29,8 @@ export const fetchPublicPlansApi = async (): Promise<any> => {
   const response = await api.get('/public/plans');
   return response.data;
 };
+
+export const createDemoRequestApi = async (data: any): Promise<any> => {
+  const response = await api.post('/public/demo-request', data);
+  return response.data;
+};

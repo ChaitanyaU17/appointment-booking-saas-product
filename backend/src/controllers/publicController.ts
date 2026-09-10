@@ -87,6 +87,11 @@ export const bookAppointment = async (req: Request, res: Response): Promise<any>
       return res.status(404).json({ message: 'Business not found' });
     }
 
+    const serviceCount = await Service.countDocuments({ businessId: business._id });
+    if (serviceCount > 0 && !serviceId) {
+      return res.status(400).json({ message: 'Please select a service to book an appointment.' });
+    }
+
     let eventDetails = null;
 
     try {
@@ -112,7 +117,7 @@ export const bookAppointment = async (req: Request, res: Response): Promise<any>
       const appointment = new Appointment({
       businessId: business._id,
       customerId: customer ? customer._id : undefined,
-      serviceId,
+      serviceId: serviceId || undefined,
       customerName,
       customerEmail,
       customerPhone,
@@ -150,5 +155,21 @@ export const bookAppointment = async (req: Request, res: Response): Promise<any>
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error during booking' });
+  }
+};
+
+import DemoRequest from '../models/DemoRequest';
+
+export const createDemoRequest = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { name, mobile, businessName, category, cityState, monthlyAppointments } = req.body;
+    const newRequest = new DemoRequest({
+      name, mobile, businessName, category, cityState, monthlyAppointments
+    });
+    await newRequest.save();
+    res.status(201).json({ message: 'Demo request submitted successfully' });
+  } catch (error) {
+    console.error('Error creating demo request:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };

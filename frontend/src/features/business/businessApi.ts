@@ -15,6 +15,11 @@ export const updateBusinessSettingsApi = async (data: any): Promise<any> => {
   return response.data;
 };
 
+export const resubmitVerificationApi = async (data: any): Promise<any> => {
+  const response = await api.put('/business/resubmit', data);
+  return response.data;
+};
+
 export const connectGoogleCalendarApi = async (): Promise<any> => {
   const response = await api.get('/auth/google');
   return response.data;

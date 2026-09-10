@@ -1,7 +1,10 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { 
   fetchSuperadminDashboardApi, fetchBusinessesApi, createBusinessApi, updateBusinessApi, deleteBusinessApi,
-  fetchAdminsApi, createAdminApi, updateAdminApi, deleteAdminApi
+  fetchAdminsApi, createAdminApi, updateAdminApi, deleteAdminApi,
+  approveBusinessApi, rejectBusinessApi, requestChangesBusinessApi,
+  activateTrialApi,
+  fetchDemoRequestsApi, approveDemoRequestApi, rejectDemoRequestApi, deleteDemoRequestApi
 } from "./superadminApi";
 import {
   fetchPlansApi, createPlanApi, updatePlanApi, deletePlanApi, togglePlanApi
@@ -23,6 +26,10 @@ interface ISuperadminState {
   plans: any[];
   plansLoading: boolean;
   plansError: any;
+
+  demoRequests: any[];
+  demoRequestsLoading: boolean;
+  demoRequestsError: any;
 }
 
 const initialState: ISuperadminState = {
@@ -41,6 +48,10 @@ const initialState: ISuperadminState = {
   plans: [],
   plansLoading: false,
   plansError: null,
+
+  demoRequests: [],
+  demoRequestsLoading: false,
+  demoRequestsError: null,
 };
 
 export const fetchSuperadminDashboard = createAsyncThunk(
@@ -99,6 +110,51 @@ export const deleteBusiness = createAsyncThunk(
       return response;
     } catch (error: any) {
       return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const approveBusiness = createAsyncThunk(
+  'superadmin/approveBusiness',
+  async ({ id, data }: { id: string; data: any }, { rejectWithValue }) => {
+    try {
+      return await approveBusinessApi(id, data);
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to approve business');
+    }
+  }
+);
+
+export const rejectBusiness = createAsyncThunk(
+  'superadmin/rejectBusiness',
+  async ({ id, data }: { id: string; data: any }, { rejectWithValue }) => {
+    try {
+      return await rejectBusinessApi(id, data);
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to reject business');
+    }
+  }
+);
+
+export const requestChangesBusiness = createAsyncThunk(
+  'superadmin/requestChangesBusiness',
+  async ({ id, data }: { id: string; data: any }, { rejectWithValue }) => {
+    try {
+      return await requestChangesBusinessApi(id, data);
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to request changes');
+    }
+  }
+);
+
+
+export const activateTrial = createAsyncThunk(
+  "superadmin/activateTrial",
+  async ({ id, data }: { id: string; data: any }, { rejectWithValue }) => {
+    try {
+      return await activateTrialApi(id, data);
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || "Failed to activate trial");
     }
   }
 );
@@ -206,6 +262,50 @@ export const togglePlan = createAsyncThunk(
   }
 );
 
+export const fetchDemoRequests = createAsyncThunk(
+  'superadmin/fetchDemoRequests',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await fetchDemoRequestsApi();
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const approveDemoRequest = createAsyncThunk(
+  'superadmin/approveDemoRequest',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      return await approveDemoRequestApi(id);
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const rejectDemoRequest = createAsyncThunk(
+  'superadmin/rejectDemoRequest',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      return await rejectDemoRequestApi(id);
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const deleteDemoRequest = createAsyncThunk(
+  'superadmin/deleteDemoRequest',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      return await deleteDemoRequestApi(id);
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
 const superadminSlice = createSlice({
   name: "superadmin",
   initialState,
@@ -285,6 +385,18 @@ const superadminSlice = createSlice({
       .addCase(togglePlan.fulfilled, (state, action) => {
         const idx = state.plans.findIndex((p: any) => p._id === action.payload._id);
         if (idx !== -1) state.plans[idx] = action.payload;
+      })
+      .addCase(fetchDemoRequests.pending, (state) => {
+        state.demoRequestsLoading = true;
+        state.demoRequestsError = null;
+      })
+      .addCase(fetchDemoRequests.fulfilled, (state, action) => {
+        state.demoRequestsLoading = false;
+        state.demoRequests = action.payload;
+      })
+      .addCase(fetchDemoRequests.rejected, (state, action) => {
+        state.demoRequestsLoading = false;
+        state.demoRequestsError = action.payload;
       });
   }
 });

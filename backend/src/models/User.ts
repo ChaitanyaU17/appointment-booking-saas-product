@@ -9,6 +9,7 @@ export enum UserRole {
 export interface IUser extends Document {
   name: string;
   email: string;
+  phone?: string;
   password?: string;
   role: UserRole;
   businessId?: mongoose.Types.ObjectId;
@@ -27,6 +28,7 @@ export interface IUser extends Document {
 const userSchema: Schema = new Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
+  phone: { type: String, unique: true, sparse: true },
   password: { type: String },
   role: { type: String, enum: Object.values(UserRole), required: true },
   businessId: { type: Schema.Types.ObjectId, ref: 'Business', default: null },

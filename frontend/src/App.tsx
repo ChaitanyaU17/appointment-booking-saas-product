@@ -13,14 +13,23 @@ import ProtectedRoute from './components/layout/ProtectedRoute';
 import { lazy } from 'react';
 
 const Landing = lazy(() => import('./pages/public/Landing'));
+const ContactSales = lazy(() => import('./pages/public/ContactSales'));
+const HelpCenter = lazy(() => import('./pages/public/HelpCenter'));
+const Security = lazy(() => import('./pages/public/Security'));
+const Integrations = lazy(() => import('./pages/public/Integrations'));
 const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
 const SuperadminLogin = lazy(() => import('./pages/superadmin/Login'));
 const SuperadminDashboard = lazy(() => import('./pages/superadmin/Dashboard'));
-const Businesses = lazy(() => import('./pages/superadmin/Businesses'));
+const Registration = lazy(() => import('./pages/superadmin/Registration'));
+const OnboardedShops = lazy(() => import('./pages/superadmin/OnboardedShops'));
+const Admins = lazy(() => import('./pages/superadmin/Admins'));
 const Plans = lazy(() => import('./pages/superadmin/Plans'));
+const DemoRequests = lazy(() => import('./pages/superadmin/DemoRequests'));
 const BusinessDashboard = lazy(() => import('./pages/business/Dashboard'));
 const Appointments = lazy(() => import('./pages/business/Appointments'));
 const Settings = lazy(() => import('./pages/business/Settings'));
+const PendingVerification = lazy(() => import('./pages/business/PendingVerification'));
 const PublicBooking = lazy(() => import('./pages/public/PublicBooking'));
 const CustomerDashboard = lazy(() => import('./pages/customer/Dashboard'));
 
@@ -45,7 +54,12 @@ function App() {
           <Routes>
             <Route element={<PublicLayout />}>
               <Route path="/" element={<Landing />} />
+              <Route path="/contact-sales" element={<ContactSales />} />
+              <Route path="/help-center" element={<HelpCenter />} />
+              <Route path="/security" element={<Security />} />
+              <Route path="/integrations" element={<Integrations />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
               <Route path="/superadmin/login" element={<SuperadminLogin />} />
 
               <Route path="/b/:slug" element={<PublicBooking />} />
@@ -58,8 +72,11 @@ function App() {
             
             <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['Superadmin']}><DashboardLayout /></ProtectedRoute>}>
               <Route index element={<SuperadminDashboard />} />
-              <Route path="businesses" element={<Businesses />} />
+              <Route path="registration" element={<Registration />} />
+              <Route path="shops" element={<OnboardedShops />} />
+              <Route path="admins" element={<Admins />} />
               <Route path="plans" element={<Plans />} />
+              <Route path="demo-requests" element={<DemoRequests />} />
             </Route>
             
             <Route path="/business" element={<ProtectedRoute allowedRoles={['BusinessAdmin']}><DashboardLayout /></ProtectedRoute>}>
@@ -67,6 +84,13 @@ function App() {
               <Route path="appointments" element={<Appointments />} />
               <Route path="settings" element={<Settings />} />
             </Route>
+            
+            {/* The pending verification route is outside the DashboardLayout but still protected */}
+            <Route path="/business/pending-verification" element={
+              <ProtectedRoute allowedRoles={['BusinessAdmin']}>
+                <PendingVerification />
+              </ProtectedRoute>
+            } />
 
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

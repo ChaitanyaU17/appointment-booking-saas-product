@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import NotificationSnackbar from '../snackbar/NotificationSnackbar';
+import DemoTour from '../tour/DemoTour';
 
 export default function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -21,6 +22,7 @@ export default function DashboardLayout() {
         </Box>
       </Box>
       <NotificationSnackbar />
+      <DemoTour />
     </Box>
   );
 }

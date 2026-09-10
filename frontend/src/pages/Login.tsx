@@ -1,4 +1,6 @@
+import React, { useState } from 'react';
 import { Box, Typography, Button, Divider, Grid } from '@mui/material';
+import BookDemoModal from '../components/auth/BookDemoModal';
 import GoogleIcon from '../components/common/GoogleIcon';
 import { useNavigate } from 'react-router-dom';
 import { showNotification } from '../features/notifications/notificationSlice';
@@ -10,6 +12,7 @@ import DynamicForm from '../components/common/DynamicForm';
 export default function Login() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const [demoModalOpen, setDemoModalOpen] = useState(false);
 
   const handleGoogleLogin = async () => {
     try {
@@ -89,8 +92,34 @@ export default function Login() {
           >
             Sign In with Google
           </Button>
+
+          <Box sx={{ mt: 4, textAlign: 'center' }}>
+            <Button
+              fullWidth
+              variant="contained"
+              color="secondary"
+              onClick={() => setDemoModalOpen(true)}
+              sx={{ mb: 2, py: 1.5, fontWeight: 700 }}
+            >
+              Book a Demo
+            </Button>
+            
+            <Typography variant="body2" color="textSecondary">
+              Don't have an account?{' '}
+              <Typography 
+                component="span" 
+                variant="body2" 
+                color="primary" 
+                sx={{ cursor: 'pointer', fontWeight: 600, textDecoration: 'none' }}
+                onClick={() => navigate('/register')}
+              >
+                Register your business here
+              </Typography>
+            </Typography>
+          </Box>
         </Box>
       </Grid>
+      <BookDemoModal open={demoModalOpen} onClose={() => setDemoModalOpen(false)} />
     </Grid>
   );
 }

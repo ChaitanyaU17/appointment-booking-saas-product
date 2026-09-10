@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import QRCode from 'qrcode';
 import Business from '../models/Business';
-import Appointment, { AppointmentStatus, AppointmentType } from '../models/Appointment';
+import Appointment, { AppointmentStatus, AppointmentType, PaymentStatus } from '../models/Appointment';
 import User from '../models/User';
 import Service from '../models/Service';
 
@@ -10,7 +11,7 @@ export const getBusinessDashboardStats = async (req: Request, res: Response): Pr
     const user = (req as any).user;
     const businessId = user.businessId;
 
-    const business = await Business.findById(businessId);
+    const business = await Business.findById(businessId).populate('planId', 'name price');
     if (!business) {
         return res.status(404).json({ message: 'Business not found' });
     }
@@ -19,18 +20,18 @@ export const getBusinessDashboardStats = async (req: Request, res: Response): Pr
     const isGoogleConnected = !!admin?.googleCalendarToken;
 
     const totalUpcoming = await Appointment.countDocuments({
-      businessId,
+      businessId: new mongoose.Types.ObjectId(businessId),
       status: { $in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] },
       startTime: { $gte: new Date() }
     });
 
     const totalCompleted = await Appointment.countDocuments({
-      businessId,
+      businessId: new mongoose.Types.ObjectId(businessId),
       status: AppointmentStatus.COMPLETED
     });
 
     const appointmentsToday = await Appointment.countDocuments({
-      businessId,
+      businessId: new mongoose.Types.ObjectId(businessId),
       startTime: { 
         $gte: new Date(new Date().setHours(0,0,0,0)), 
         $lte: new Date(new Date().setHours(23,59,59,999)) 
@@ -38,12 +39,12 @@ export const getBusinessDashboardStats = async (req: Request, res: Response): Pr
     });
 
     const totalWalkins = await Appointment.countDocuments({
-      businessId,
+      businessId: new mongoose.Types.ObjectId(businessId),
       type: AppointmentType.WALK_IN
     });
 
     const totalOnline = await Appointment.countDocuments({
-      businessId,
+      businessId: new mongoose.Types.ObjectId(businessId),
       type: AppointmentType.GOOGLE_MEET
     });
 
@@ -52,7 +53,7 @@ export const getBusinessDashboardStats = async (req: Request, res: Response): Pr
     sevenDaysAgo.setHours(0, 0, 0, 0);
     
     const recentAppointments = await Appointment.find({
-      businessId,
+      businessId: new mongoose.Types.ObjectId(businessId),
       startTime: { $gte: sevenDaysAgo }
     }).select('startTime');
 
@@ -83,7 +84,7 @@ export const getBusinessDashboardStats = async (req: Request, res: Response): Pr
     const todayEnd = new Date(new Date().setHours(23,59,59,999));
 
     const todaySchedule = await Appointment.find({
-      businessId,
+      businessId: new mongoose.Types.ObjectId(businessId),
       startTime: { $gte: todayStart, $lte: todayEnd }
     }).sort({ startTime: 1 }).populate('serviceId', 'name');
 
@@ -93,8 +94,8 @@ export const getBusinessDashboardStats = async (req: Request, res: Response): Pr
 
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const paidAppointments = await Appointment.find({
-      businessId,
-      paymentStatus: 'Paid',
+      businessId: new mongoose.Types.ObjectId(businessId),
+      paymentStatus: PaymentStatus.PAID,
       startTime: { $gte: monthStart }
     });
 
@@ -102,6 +103,11 @@ export const getBusinessDashboardStats = async (req: Request, res: Response): Pr
     const revenueToday = paidAppointments
       .filter(app => new Date(app.startTime) >= todayStart && new Date(app.startTime) <= todayEnd)
       .reduce((sum, app) => sum + (app.paymentAmount || 0), 0);
+
+    const plan = (business.planId as any);
+    const trialDaysLeft = business.trialStatus === 'Active' && business.trialEndsAt
+      ? Math.max(0, Math.ceil((new Date(business.trialEndsAt).getTime() - Date.now()) / 86400000))
+      : null;
 
     res.json({
       totalUpcoming,
@@ -116,6 +122,9 @@ export const getBusinessDashboardStats = async (req: Request, res: Response): Pr
       recentBookings,
       revenueMonth,
       revenueToday,
+      trialStatus: business.trialStatus,
+      trialDaysLeft,
+      planName: plan?.name || null,
       typeData: [
         { name: 'Walk-in', value: totalWalkins },
         { name: 'Online', value: totalOnline }
@@ -140,7 +149,7 @@ export const getBusinessSettings = async (req: Request, res: Response): Promise<
     }
 
     const admin = await User.findById(user._id).select('-password');
-    const isGoogleConnected = !!admin?.googleCalendarToken;
+    const isGoogleConnected = business.isDemoAccount ? true : !!admin?.googleCalendarToken;
 
     const bookingUrl = `${process.env.FRONTEND_URL}/b/${business.slug}`;
     const qrCode = await QRCode.toDataURL(bookingUrl);
@@ -390,5 +399,23 @@ export const updateBusinessPlan = async (req: Request, res: Response): Promise<a
     res.status(200).json({ message: 'Subscription plan updated successfully', planId });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const resubmitVerification = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const user = (req as any).user;
+    const { note } = req.body;
+    
+    const business = await Business.findById(user.businessId);
+    if (!business) return res.status(404).json({ message: "Business not found" });
+
+    business.verificationStatus = "Pending";
+    business.resubmitNote = note;
+    
+    await business.save();
+    res.json({ message: "Resubmitted for verification", business });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
   }
 };

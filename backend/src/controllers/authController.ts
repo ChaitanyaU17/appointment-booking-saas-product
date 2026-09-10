@@ -1,8 +1,77 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { google } from 'googleapis';
+import mongoose from 'mongoose';
 import User, { UserRole } from '../models/User';
+import Business from '../models/Business';
+import Appointment, { AppointmentStatus, AppointmentType } from '../models/Appointment';
 import { generateToken, clearToken } from '../utils/jwt';
+
+export const register = async (req: Request, res: Response): Promise<any> => {
+  const { name, email, phone, password, businessName, category, registrationNumber, requestedPlanId } = req.body;
+
+  try {
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({ message: 'Email is already registered' });
+    }
+
+    if (phone) {
+      const existingPhone = await User.findOne({ phone });
+      if (existingPhone) {
+        return res.status(400).json({ message: 'Phone number is already registered' });
+      }
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const slug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+
+    const existingBusiness = await Business.findOne({ slug });
+    if (existingBusiness) {
+      return res.status(400).json({ message: 'Business name is already taken, please choose another' });
+    }
+
+    const user = new User({
+      name,
+      email,
+      phone,
+      password: hashedPassword,
+      role: UserRole.BUSINESS_ADMIN
+    });
+
+    const business = new Business({
+      name: businessName,
+      slug,
+      category: category || 'N/A',
+      registrationNumber: registrationNumber || 'N/A',
+      email,
+      phone,
+      verificationStatus: 'Pending',
+      requestedPlanId: requestedPlanId || null,
+      subscriptionStatus: 'trial'
+    });
+
+    user.businessId = business._id as mongoose.Types.ObjectId;
+
+    await business.save();
+    await user.save();
+
+    generateToken(res, user._id.toString());
+    res.status(201).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      businessId: user.businessId,
+      verificationStatus: business.verificationStatus
+    });
+  } catch (error: any) {
+    console.error('Register error:', error);
+    res.status(500).json({ message: 'Server error during registration' });
+  }
+};
 
 export const login = async (req: Request, res: Response): Promise<any> => {
   const { email, password } = req.body;
@@ -12,12 +81,23 @@ export const login = async (req: Request, res: Response): Promise<any> => {
 
     if (user && user.password && (await bcrypt.compare(password, user.password))) {
       generateToken(res, user._id.toString());
+      
+      let verificationStatus = undefined;
+      let isDemoAccount = false;
+      if (user.role === UserRole.BUSINESS_ADMIN && user.businessId) {
+        const business = await Business.findById(user.businessId);
+        verificationStatus = business?.verificationStatus;
+        isDemoAccount = business?.isDemoAccount || false;
+      }
+
       res.json({
         _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
-        businessId: user.businessId
+        businessId: user.businessId,
+        verificationStatus,
+        isDemoAccount
       });
     } else {
       res.status(401).json({ message: 'Invalid email or password' });
@@ -37,12 +117,21 @@ export const getMe = async (req: Request, res: Response): Promise<any> => {
   try {
     const user = (req as any).user;
     if (user) {
+      let verificationStatus = undefined;
+      let isDemoAccount = false;
+      if (user.role === UserRole.BUSINESS_ADMIN && user.businessId) {
+        const business = await Business.findById(user.businessId);
+        verificationStatus = business?.verificationStatus;
+        isDemoAccount = business?.isDemoAccount || false;
+      }
       res.json({
         _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
-        businessId: user.businessId
+        businessId: user.businessId,
+        verificationStatus,
+        isDemoAccount
       });
     } else {
       res.status(404).json({ message: 'User not found' });
@@ -143,5 +232,69 @@ export const googleCallback = async (req: Request, res: Response): Promise<any> 
   } catch (error) {
     console.error('Error during Google Auth Callback:', error);
     res.status(500).json({ message: 'Authentication failed' });
+  }
+};
+
+
+
+export const createDemoAccount = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const randomId = Math.floor(Math.random() * 1000000);
+    const demoEmail = `demo${randomId}@example.com`;
+    const demoSlug = `demo-shop-${randomId}`;
+
+    const business = new Business({
+      name: 'Demo Beauty Salon',
+      slug: demoSlug,
+      category: 'Salon',
+      registrationNumber: 'DEMO-123',
+      email: demoEmail,
+      phone: '1234567890',
+      verificationStatus: 'Approved',
+      isDemoAccount: true,
+      subscriptionStatus: 'active'
+    });
+    await business.save();
+
+    const hashedPassword = await bcrypt.hash('DemoPassword123!', 10);
+
+    const user = new User({
+      name: 'Demo Admin',
+      email: demoEmail,
+      password: hashedPassword,
+      role: UserRole.BUSINESS_ADMIN,
+      businessId: business._id,
+    });
+    await user.save();
+
+    const appointment = new Appointment({
+      businessId: business._id,
+      title: 'Haircut & Styling',
+      creatorRole: UserRole.CUSTOMER,
+      customerName: 'sam patil',
+      customerEmail: 'sam@example.com',
+      customerPhone: '9876543210',
+      serviceName: 'Haircut & Styling',
+      startTime: new Date(Date.now() + 1000 * 60 * 60 * 2), // 2h
+      endTime: new Date(Date.now() + 1000 * 60 * 60 * 3),
+      type: AppointmentType.WALK_IN,
+      status: AppointmentStatus.CONFIRMED,
+      paymentAmount: 800,
+    });
+    await appointment.save();
+
+    generateToken(res, user._id.toString());
+    res.status(201).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      businessId: user.businessId,
+      verificationStatus: business.verificationStatus,
+      isDemoAccount: true
+    });
+  } catch (error: any) {
+    console.error('Error creating demo account:', error);
+    res.status(500).json({ message: error.message, stack: error.stack });
   }
 };

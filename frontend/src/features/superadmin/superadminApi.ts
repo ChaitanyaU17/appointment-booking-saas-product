@@ -44,3 +44,43 @@ export const deleteAdminApi = async (id: string): Promise<any> => {
   const response = await api.delete(`/superadmin/admins/${id}`);
   return response.data;
 };
+
+export const approveBusinessApi = async (id: string, data: any): Promise<any> => {
+  const response = await api.put(`/superadmin/businesses/${id}/approve`, data);
+  return response.data;
+};
+
+export const rejectBusinessApi = async (id: string, data: any): Promise<any> => {
+  const response = await api.put(`/superadmin/businesses/${id}/reject`, data);
+  return response.data;
+};
+
+export const requestChangesBusinessApi = async (id: string, data: any): Promise<any> => {
+  const response = await api.put(`/superadmin/businesses/${id}/request-changes`, data);
+  return response.data;
+};
+
+export const activateTrialApi = async (id: string, data: any): Promise<any> => {
+  const response = await api.put(`/superadmin/businesses/${id}/activate-trial`, data);
+  return response.data;
+};
+
+export const fetchDemoRequestsApi = async (): Promise<any> => {
+  const response = await api.get('/superadmin/demo-requests');
+  return response.data;
+};
+
+export const approveDemoRequestApi = async (id: string): Promise<any> => {
+  const response = await api.put(`/superadmin/demo-requests/${id}/approve`);
+  return response.data;
+};
+
+export const rejectDemoRequestApi = async (id: string): Promise<any> => {
+  const response = await api.put(`/superadmin/demo-requests/${id}/reject`);
+  return response.data;
+};
+
+export const deleteDemoRequestApi = async (id: string): Promise<any> => {
+  const response = await api.delete(`/superadmin/demo-requests/${id}`);
+  return response.data;
+};

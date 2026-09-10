@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { Skeleton, Box, Card, Typography, Grid, useTheme, CardContent, CardHeader, Chip, List, ListItem, ListItemAvatar, Avatar, ListItemText, Divider } from '@mui/material';
+import { Skeleton, Box, Card, Typography, Grid, useTheme, CardContent, CardHeader, Chip, List, ListItem, ListItemAvatar, Avatar, ListItemText, Divider, Button } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import StoreIcon from '@mui/icons-material/Store';
 import PeopleIcon from '@mui/icons-material/People';
 import EventIcon from '@mui/icons-material/Event';
@@ -30,28 +31,30 @@ const MiniChart = ({ color }: { color: string }) => {
   );
 };
 
-const KpiCard = ({ title, value, icon, trend = 15.2, trendUp = true, color = '#659287', loading }: any) => {
-  if (loading) return <Skeleton variant="rounded" height={180} sx={{ borderRadius: 4 }} />;
+const KpiCard = ({ title, value, icon, trend = 15.2, trendUp = true, color = '#659287', loading, action }: any) => {
+  if (loading) return <Skeleton variant="rounded" height={160} sx={{ borderRadius: 4 }} />;
 
   return (
     <Card sx={{ 
-      p: 3, 
+      p: 2.5, 
       borderRadius: 4, 
       bgcolor: 'white',
       color: 'text.primary',
       boxShadow: '0 2px 12px rgba(31,43,39,0.06)',
-      height: '100%'
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column'
     }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: color, mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: color, mb: 1.5 }}>
         {React.cloneElement(icon, { fontSize: 'small' })}
-        <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>{title}</Typography>
+        <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.85rem' }}>{title}</Typography>
       </Box>
       
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Typography variant="h3" sx={{ fontWeight: 800 }}>{value}</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: action ? 1.5 : 0, flexGrow: 1 }}>
+        <Typography variant="h4" sx={{ fontWeight: 800 }}>{value}</Typography>
         <Chip 
-          icon={trendUp ? <TrendingUpIcon style={{ fontSize: 16, color: 'inherit' }} /> : <TrendingDownIcon style={{ fontSize: 16, color: 'inherit' }} />} 
-          label={`${trend}%`} 
+          icon={trendUp ? <TrendingUpIcon style={{ fontSize: 14, color: 'inherit' }} /> : <TrendingDownIcon style={{ fontSize: 14, color: 'inherit' }} />} 
+          label={`${Math.abs(trend)}%`} 
           size="small" 
           sx={{ 
             bgcolor: trendUp ? '#e6f4ea' : '#fce8e6',
@@ -59,22 +62,26 @@ const KpiCard = ({ title, value, icon, trend = 15.2, trendUp = true, color = '#6
             fontWeight: 700,
             borderRadius: 2,
             px: 0.5,
+            height: 24,
+            fontSize: '0.75rem',
             '& .MuiChip-icon': { ml: 0.5 }
           }} 
         />
       </Box>
-      
+
       <MiniChart color={color} />
       
       <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 500 }}>
         VS last week
       </Typography>
+      {action && <Box sx={{ mt: 2 }}>{action}</Box>}
     </Card>
   );
 };
 
 export default function SuperadminDashboard() {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const { dashboardData: stats, dashboardLoading: loading } = useAppSelector((state) => state.superadmin);
   const theme = useTheme();
 
@@ -84,8 +91,18 @@ export default function SuperadminDashboard() {
 
   return (
     <Box sx={{ pb: 4 }}>
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        flexWrap: 'wrap', 
+        gap: 3, 
+        mb: 4,
+        '& > *': { 
+          flexGrow: 1,
+          flexBasis: { xs: '100%', sm: 'calc(50% - 24px)', md: 'calc(33.33% - 24px)' },
+          maxWidth: { xs: '100%', sm: 'calc(50% - 24px)', md: 'calc(33.33% - 24px)' }
+        }
+      }}>
+        <Box>
           <KpiCard 
             loading={loading}
             title="Total Appointments" 
@@ -95,19 +112,69 @@ export default function SuperadminDashboard() {
             trend={18.4}
             trendUp={true}
           />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+        </Box>
+        <Box>
           <KpiCard 
             loading={loading}
-            title="Total Businesses" 
-            value={stats?.totalBusinesses?.toLocaleString() || 0} 
+            title="Registered Shops" 
+            value={stats?.registeredShops?.toLocaleString() || 0} 
             icon={<StoreIcon />} 
             color="#2196f3"
             trend={12.5}
             trendUp={true}
           />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+        </Box>
+        <Box>
+          <KpiCard 
+            loading={loading}
+            title="Pending Verification" 
+            value={stats?.pendingShops?.toLocaleString() || 0} 
+            icon={<StoreIcon />} 
+            color="#ff9800"
+            trend={0}
+            trendUp={true}
+            action={
+              (stats?.pendingShops || 0) > 0 ? (
+                <Button 
+                  variant="outlined" 
+                  color="warning" 
+                  size="small" 
+                  fullWidth 
+                  onClick={() => navigate('/superadmin/registration')}
+                  sx={{ borderRadius: 2 }}
+                >
+                  Verify Now
+                </Button>
+              ) : null
+            }
+          />
+        </Box>
+        <Box>
+          <KpiCard 
+            loading={loading}
+            title="Pending Demo Requests" 
+            value={stats?.pendingDemoRequests?.toLocaleString() || 0} 
+            icon={<PeopleIcon />} 
+            color="#e91e63"
+            trend={0}
+            trendUp={true}
+            action={
+              (stats?.pendingDemoRequests || 0) > 0 ? (
+                <Button 
+                  variant="outlined" 
+                  color="error" 
+                  size="small" 
+                  fullWidth 
+                  onClick={() => navigate('/superadmin/demo-requests')}
+                  sx={{ borderRadius: 2 }}
+                >
+                  Review Leads
+                </Button>
+              ) : null
+            }
+          />
+        </Box>
+        <Box>
           <KpiCard 
             loading={loading}
             title="Business Admins" 
@@ -117,13 +184,24 @@ export default function SuperadminDashboard() {
             trend={4.2}
             trendUp={true}
           />
-        </Grid>
-      </Grid>
+        </Box>
+        <Box>
+          <KpiCard 
+            loading={loading}
+            title="Active Trials" 
+            value={stats?.activeTrials?.toLocaleString() || 0} 
+            icon={<StoreIcon />} 
+            color="#9c27b0"
+            trend={0}
+            trendUp={true}
+          />
+        </Box>
+      </Box>
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 8 }}>
           <Card sx={{ borderRadius: 3, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-            <CardHeader title="30-Day Appointment Trend" titleTypographyProps={{ fontWeight: 600 }} />
+            <CardHeader title={<Typography variant="h6" sx={{ fontWeight: 600 }}>30-Day Appointment Trend</Typography>} />
             <CardContent>
               {loading ? (
                 <Skeleton variant="rounded" height={300} />
@@ -149,7 +227,7 @@ export default function SuperadminDashboard() {
 
         <Grid size={{ xs: 12, md: 4 }}>
           <Card sx={{ borderRadius: 3, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', height: '100%' }}>
-            <CardHeader title="Appointment Types" titleTypographyProps={{ fontWeight: 600 }} />
+            <CardHeader title={<Typography variant="h6" sx={{ fontWeight: 600 }}>Appointment Types</Typography>} />
             <CardContent>
               {loading ? (
                 <Skeleton variant="rounded" height={300} />
@@ -182,7 +260,7 @@ export default function SuperadminDashboard() {
       <Grid container spacing={3} sx={{ mt: 1 }}>
         <Grid size={{ xs: 12 }}>
           <Card sx={{ borderRadius: 3, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', height: '100%' }}>
-            <CardHeader title="Recent Activity" titleTypographyProps={{ fontWeight: 600 }} />
+            <CardHeader title={<Typography variant="h6" sx={{ fontWeight: 600 }}>Recent Activity</Typography>} />
             <CardContent sx={{ pt: 0 }}>
               {loading ? (
                 <Skeleton variant="rounded" height={250} />

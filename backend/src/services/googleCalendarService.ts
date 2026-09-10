@@ -1,9 +1,11 @@
+import mongoose from 'mongoose';
 import { google, Auth } from 'googleapis';
 import User, { UserRole } from '../models/User';
 import Business from '../models/Business';
+import Appointment, { AppointmentStatus } from '../models/Appointment';
 
 const getOAuthClient = async (businessId: string): Promise<Auth.OAuth2Client> => {
-  const admin = await User.findOne({ businessId, role: UserRole.BUSINESS_ADMIN });
+  const admin = await User.findOne({ businessId: new mongoose.Types.ObjectId(businessId), role: UserRole.BUSINESS_ADMIN });
   
   if (!admin || !admin.googleCalendarToken) {
     throw new Error('Business is not connected to Google Calendar');
@@ -22,10 +24,7 @@ const getOAuthClient = async (businessId: string): Promise<Auth.OAuth2Client> =>
 
 export const getAvailableSlots = async (businessId: string, dateStr: string) => {
   try {
-    const oauth2Client = await getOAuthClient(businessId);
-    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
     const business = await Business.findById(businessId);
-
     if (!business) throw new Error('Business not found');
 
     const date = new Date(dateStr);
@@ -35,16 +34,41 @@ export const getAvailableSlots = async (businessId: string, dateStr: string) => 
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const response = await calendar.freebusy.query({
-      requestBody: {
-        timeMin: startOfDay.toISOString(),
-        timeMax: endOfDay.toISOString(),
-        timeZone: business.settings.timezone,
-        items: [{ id: 'primary' }]
+    let busySlots: { start: string, end: string }[] = [];
+
+    // Try Google Calendar
+    try {
+      const oauth2Client = await getOAuthClient(businessId);
+      const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+      const response = await calendar.freebusy.query({
+        requestBody: {
+          timeMin: startOfDay.toISOString(),
+          timeMax: endOfDay.toISOString(),
+          timeZone: business.settings.timezone,
+          items: [{ id: 'primary' }]
+        }
+      });
+      if (response.data.calendars?.primary.busy) {
+        busySlots = response.data.calendars.primary.busy as any;
       }
+    } catch (e: any) {
+      console.log('Google Calendar not connected or failed, falling back to local DB slots');
+    }
+
+    // Get local appointments
+    const localAppointments = await Appointment.find({
+      businessId: new mongoose.Types.ObjectId(businessId),
+      status: { $nin: [AppointmentStatus.CANCELLED, 'Rejected' as any] },
+      startTime: { $gte: startOfDay },
+      endTime: { $lte: endOfDay }
     });
 
-    const busySlots = response.data.calendars?.primary.busy || [];
+    localAppointments.forEach(app => {
+      busySlots.push({
+        start: new Date(app.startTime).toISOString(),
+        end: new Date(app.endTime).toISOString()
+      });
+    });
     
     const dayOfWeek = date.getDay();
     const daySettings = business.settings.availableHours.find(h => h.dayOfWeek === dayOfWeek);

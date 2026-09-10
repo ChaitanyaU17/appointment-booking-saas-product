@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { 
   fetchBusinessDashboardApi, fetchBusinessSettingsApi, updateBusinessSettingsApi, connectGoogleCalendarApi, updateBusinessPlanApi,
-  fetchServicesApi, createServiceApi, updateServiceApi, deleteServiceApi
+  fetchServicesApi, createServiceApi, updateServiceApi, deleteServiceApi, resubmitVerificationApi
 } from "./businessApi";
 
 interface IBusinessState {
@@ -59,6 +59,18 @@ export const updateBusinessSettings = createAsyncThunk(
   async (data: any, { rejectWithValue }) => {
     try {
       const response = await updateBusinessSettingsApi(data);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const resubmitVerification = createAsyncThunk(
+  'business/resubmitVerification',
+  async (data: any, { rejectWithValue }) => {
+    try {
+      const response = await resubmitVerificationApi(data);
       return response;
     } catch (error: any) {
       return rejectWithValue(error?.response?.data?.message || error?.message);
