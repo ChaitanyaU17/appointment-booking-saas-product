@@ -19,7 +19,8 @@ export const register = async (req: Request, res: Response): Promise<any> => {
     if (phone) {
       const existingPhone = await User.findOne({ phone });
       if (existingPhone) {
-        return res.status(400).json({ message: 'Phone number is already registered' });
+    
+          return res.status(400).json({ message: 'Phone number is already registered' });
       }
     }
 
@@ -48,6 +49,7 @@ export const register = async (req: Request, res: Response): Promise<any> => {
       registrationNumber: registrationNumber || 'N/A',
       email,
       phone,
+      ownerName: name,
       verificationStatus: 'Pending',
       requestedPlanId: requestedPlanId || null,
       subscriptionStatus: 'trial'

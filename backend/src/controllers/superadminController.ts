@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import DemoRequest from '../models/DemoRequest';
 import Appointment, { AppointmentStatus, AppointmentType } from '../models/Appointment';
 import bcrypt from 'bcryptjs';
@@ -5,6 +6,23 @@ import { Request, Response } from 'express';
 import User, { UserRole } from '../models/User';
 import Business from '../models/Business';
 import Plan from '../models/Plan';
+import Service from '../models/Service';
+
+const cleanupDemoSandbox = async (business: any) => {
+  if (business.demoBusinessId) {
+    const adminUser = await User.findOne({ originalBusinessId: business._id });
+    if (adminUser) {
+      adminUser.businessId = adminUser.originalBusinessId;
+      adminUser.originalBusinessId = undefined;
+      await adminUser.save();
+    }
+    await Appointment.deleteMany({ businessId: business.demoBusinessId });
+    await Service.deleteMany({ businessId: business.demoBusinessId });
+    await Business.findByIdAndDelete(business.demoBusinessId);
+    business.demoBusinessId = undefined;
+    business.demoStatus = 'None';
+  }
+};
 
 export const getDashboardStats = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -119,6 +137,7 @@ export const createBusiness = async (req: Request, res: Response): Promise<any> 
       slug,
       email,
       phone,
+      ownerName: req.body.ownerName || 'N/A',
       category: category || 'N/A',
       registrationNumber: registrationNumber || 'N/A',
       description,
@@ -179,6 +198,7 @@ export const deleteBusiness = async (req: Request, res: Response): Promise<any> 
   try {
     const business = await Business.findById(req.params.id);
     if (business) {
+      await cleanupDemoSandbox(business);
       await business.deleteOne();
       await User.deleteMany({ businessId: business._id });
       await Appointment.deleteMany({ businessId: business._id });
@@ -278,15 +298,24 @@ export const deleteBusinessAdmin = async (req: Request, res: Response): Promise<
 export const approveBusiness = async (req: Request, res: Response): Promise<any> => {
   try {
     const { id } = req.params;
-    const { planId } = req.body;
+    const { planId, planVariantId, discountPercentage } = req.body;
     
     const business = await Business.findById(id);
     if (!business) return res.status(404).json({ message: 'Business not found' });
 
-    business.verificationStatus = 'Approved';
-    if (planId) {
-      business.planId = planId;
+    if (business.demoStatus !== 'Conducted') {
+      return res.status(400).json({ message: 'Please mark the demo as conducted before approving.' });
     }
+
+    // Cleanup demo sandbox: swap user back to real business and delete demo data
+    await cleanupDemoSandbox(business);
+
+    business.verificationStatus = 'Approved';
+    business.demoStatus = 'Conducted';
+    
+    if (planId) business.planId = planId;
+    if (planVariantId) business.planVariantId = planVariantId;
+    if (discountPercentage !== undefined) business.discountPercentage = discountPercentage;
 
     // Fix for legacy documents missing required fields
     if (!business.category) business.category = 'N/A';
@@ -311,6 +340,8 @@ export const rejectBusiness = async (req: Request, res: Response): Promise<any> 
     business.verificationStatus = 'Rejected';
     business.rejectionReason = reason;
 
+    await cleanupDemoSandbox(business);
+
     if (!business.category) business.category = 'N/A';
     if (!business.registrationNumber) business.registrationNumber = 'N/A';
     
@@ -333,6 +364,8 @@ export const requestBusinessChanges = async (req: Request, res: Response): Promi
     business.verificationStatus = 'ChangesRequested';
     business.changesRequestedNote = note;
 
+    await cleanupDemoSandbox(business);
+
     if (!business.category) business.category = 'N/A';
     if (!business.registrationNumber) business.registrationNumber = 'N/A';
     
@@ -351,6 +384,14 @@ export const activateTrial = async (req: Request, res: Response): Promise<any> =
     
     const business = await Business.findById(id);
     if (!business) return res.status(404).json({ message: "Business not found" });
+
+    if (business.demoStatus !== 'Conducted') {
+      return res.status(400).json({ message: 'Please mark the demo as conducted before activating trial.' });
+    }
+
+    // Cleanup demo sandbox: swap user back to real business and delete demo data
+    await cleanupDemoSandbox(business);
+    business.demoStatus = 'Conducted';
 
     // Activating a trial automatically approves the business if it's still pending
     if (business.verificationStatus !== 'Approved') {
@@ -391,6 +432,140 @@ export const activateTrial = async (req: Request, res: Response): Promise<any> =
 
 
 
+export const createDemoForRegistration = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { id } = req.params;
+    const { meetLink } = req.body;
+
+    const business = await Business.findById(id);
+    if (!business) return res.status(404).json({ message: 'Business not found' });
+
+    if (business.demoStatus === 'Provided') {
+      return res.status(400).json({ message: 'Demo has already been provided for this business.' });
+    }
+
+    // Find the admin user linked to this business
+    const adminUser = await User.findOne({ businessId: business._id, role: UserRole.BUSINESS_ADMIN });
+    if (!adminUser) return res.status(404).json({ message: 'No admin user found for this business.' });
+
+    const randomId = Math.floor(Math.random() * 100000);
+    const demoSlug = `demo-${business.slug}-${randomId}`;
+
+    // Create demo sandbox business
+    const demoBusiness = new Business({
+      name: `Demo - ${business.name}`,
+      slug: demoSlug,
+      category: business.category || 'N/A',
+      registrationNumber: `DEMO-${randomId}`,
+      email: adminUser.email,
+      phone: business.phone,
+      verificationStatus: 'Approved',
+      isDemoAccount: true,
+      onboardingMeetLink: meetLink,
+      subscriptionStatus: 'active',
+      settings: {
+        timezone: 'Asia/Kolkata',
+        currency: 'INR',
+        defaultPrice: 0,
+        availableHours: [
+          { dayOfWeek: 0, startTime: '09:00', endTime: '17:00', isClosed: true },
+          { dayOfWeek: 1, startTime: '09:00', endTime: '18:00', isClosed: false },
+          { dayOfWeek: 2, startTime: '09:00', endTime: '18:00', isClosed: false },
+          { dayOfWeek: 3, startTime: '09:00', endTime: '18:00', isClosed: false },
+          { dayOfWeek: 4, startTime: '09:00', endTime: '18:00', isClosed: false },
+          { dayOfWeek: 5, startTime: '09:00', endTime: '18:00', isClosed: false },
+          { dayOfWeek: 6, startTime: '10:00', endTime: '16:00', isClosed: false },
+        ]
+      }
+    });
+    await demoBusiness.save();
+
+    // Seed sample services
+    const sampleServices = [
+      { businessId: demoBusiness._id, name: 'Haircut & Styling', duration: 30, price: 300, description: 'Professional haircut with wash and style', isActive: true },
+      { businessId: demoBusiness._id, name: 'Facial Treatment', duration: 45, price: 500, description: 'Deep cleansing facial with moisturizing', isActive: true },
+      { businessId: demoBusiness._id, name: 'Hair Coloring', duration: 60, price: 800, description: 'Full hair coloring with premium products', isActive: true },
+    ];
+    await Service.insertMany(sampleServices);
+
+    // Seed sample appointments
+    const now = new Date();
+    const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    const threeHoursLater = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const tomorrowPlusOne = new Date(now.getTime() + 25 * 60 * 60 * 1000);
+
+    const sampleAppointments = [
+      {
+        businessId: demoBusiness._id,
+        title: 'Haircut & Styling',
+        customerName: 'Rahul Sharma',
+        customerEmail: 'rahul@example.com',
+        customerPhone: '9876543210',
+        startTime: twoHoursLater,
+        endTime: threeHoursLater,
+        type: AppointmentType.WALK_IN,
+        status: AppointmentStatus.CONFIRMED,
+        creatorRole: 'Customer',
+        price: 300,
+      },
+      {
+        businessId: demoBusiness._id,
+        title: 'Facial Treatment',
+        customerName: 'Priya Patel',
+        customerEmail: 'priya@example.com',
+        customerPhone: '9876543211',
+        startTime: tomorrow,
+        endTime: tomorrowPlusOne,
+        type: AppointmentType.WALK_IN,
+        status: AppointmentStatus.PENDING,
+        creatorRole: 'Customer',
+        price: 500,
+      },
+    ];
+    await Appointment.insertMany(sampleAppointments);
+
+    // Swap user's businessId to demo sandbox
+    adminUser.originalBusinessId = adminUser.businessId;
+    adminUser.businessId = demoBusiness._id as mongoose.Types.ObjectId;
+    await adminUser.save();
+
+    // Update original business to track demo status
+    business.demoStatus = 'Provided';
+    business.demoBusinessId = demoBusiness._id as mongoose.Types.ObjectId;
+    if (meetLink) {
+      business.onboardingMeetLink = meetLink;
+    }
+    await business.save();
+
+    res.json({ message: 'Demo provided successfully. The user can now log in with their existing credentials to explore the app.', demoBusinessName: demoBusiness.name });
+  } catch (error: any) {
+    console.error('Error creating demo for registration:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const markDemoConducted = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { id } = req.params;
+
+    const business = await Business.findById(id);
+    if (!business) return res.status(404).json({ message: 'Business not found' });
+
+    if (business.demoStatus !== 'Provided') {
+      return res.status(400).json({ message: 'Demo has not been provided yet.' });
+    }
+
+    business.demoStatus = 'Conducted';
+    await business.save();
+
+    res.json({ message: 'Demo marked as conducted successfully.', business });
+  } catch (error: any) {
+    console.error('Error marking demo as conducted:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 
 export const getDemoRequests = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -416,6 +591,9 @@ export const approveDemoRequest = async (req: Request, res: Response): Promise<a
     request.status = 'Approved';
     request.demoEmail = demoEmail;
     request.demoPassword = demoPassword;
+    if (req.body.meetLink) {
+      request.meetLink = req.body.meetLink;
+    }
     await request.save();
 
     const business = new Business({
@@ -427,6 +605,7 @@ export const approveDemoRequest = async (req: Request, res: Response): Promise<a
       phone: request.mobile,
       verificationStatus: 'Approved',
       isDemoAccount: true,
+      onboardingMeetLink: req.body.meetLink,
       subscriptionStatus: 'active'
     });
     await business.save();
@@ -457,8 +636,9 @@ export const approveDemoRequest = async (req: Request, res: Response): Promise<a
     await appointment.save();
 
     res.json({ email: demoEmail, password: demoPassword });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+  } catch (error: any) {
+    console.error('approveDemoRequest error:', error);
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 };
 

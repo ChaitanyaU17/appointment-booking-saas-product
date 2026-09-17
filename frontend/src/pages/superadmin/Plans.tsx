@@ -47,6 +47,7 @@ export default function Plans() {
       slug: '',
       price: 0,
       billingCycle: 'monthly' as string,
+      variants: [] as any[],
       displayOrder: 0,
       isActive: true,
       isDefault: false,
@@ -103,6 +104,7 @@ export default function Plans() {
       slug: plan.slug,
       price: plan.price,
       billingCycle: plan.billingCycle || 'monthly',
+      variants: plan.variants || [],
       displayOrder: plan.displayOrder || 0,
       isActive: plan.isActive,
       isDefault: plan.isDefault,
@@ -196,8 +198,8 @@ export default function Plans() {
                 <CardContent sx={{ p: 3 }}>
                   <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>{plan.name}</Typography>
                   <Typography variant="h4" sx={{ fontWeight: 800, mb: 0.5 }}>
-                    {formatPrice(plan.price)}
-                    {plan.price > 0 && <Typography component="span" variant="body2" color="text.secondary">/{plan.billingCycle === 'yearly' ? 'yr' : 'mo'}</Typography>}
+                    {formatPrice(plan.variants && plan.variants.length > 0 ? Math.min(...plan.variants.map(v => v.price)) : (plan.price || 0))}
+                    {plan.variants && plan.variants.length > 0 && <Typography component="span" variant="body2" color="text.secondary">/onwards</Typography>}
                   </Typography>
                   <Chip 
                     label={plan.isActive ? 'Active' : 'Inactive'} 
@@ -291,7 +293,7 @@ export default function Plans() {
                     </Box>
                   </TableCell>
                   <TableCell><Chip label={plan.slug} size="small" /></TableCell>
-                  <TableCell>{formatPrice(plan.price)}{plan.price > 0 ? `/${plan.billingCycle === 'yearly' ? 'yr' : 'mo'}` : ''}</TableCell>
+                  <TableCell>{formatPrice(plan.variants && plan.variants.length > 0 ? Math.min(...plan.variants.map(v => v.price)) : (plan.price || 0))}{plan.price > 0 ? `/${plan.billingCycle === 'yearly' ? 'yr' : 'mo'}` : ''}</TableCell>
                   <TableCell>{plan.businessCount || 0}</TableCell>
                   <TableCell>{plan.features?.maxBookingsPerMonth >= 9999 ? 'Unlimited' : plan.features?.maxBookingsPerMonth}</TableCell>
                   <TableCell>{plan.features?.maxServices >= 9999 ? 'Unlimited' : plan.features?.maxServices}</TableCell>
@@ -334,25 +336,42 @@ export default function Plans() {
               error={formik.touched.slug && Boolean(formik.errors.slug)}
               helperText={formik.touched.slug && formik.errors.slug}
             />
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 6 }}>
-                <TextField
-                  fullWidth margin="normal" label="Price (₹)" type="number"
-                  name="price" value={formik.values.price} onChange={formik.handleChange} onBlur={formik.handleBlur}
-                  error={formik.touched.price && Boolean(formik.errors.price)}
-                  helperText={formik.touched.price && formik.errors.price}
-                />
-              </Grid>
-              <Grid size={{ xs: 6 }}>
-                <TextField
-                  fullWidth margin="normal" label="Billing Cycle" select
-                  name="billingCycle" value={formik.values.billingCycle} onChange={formik.handleChange}
-                >
+            <Divider sx={{ my: 2 }} />
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Plan Variants</Typography>
+              <Button size="small" variant="contained" color="success" onClick={() => {
+                formik.setFieldValue('variants', [
+                  ...formik.values.variants,
+                  { name: '', billingCycle: 'monthly', durationDays: 30, price: 0 }
+                ]);
+              }}>+ Add Variant</Button>
+            </Box>
+            
+            {formik.values.variants.map((v, i) => (
+              <Box key={i} sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1, p: 1, border: '1px solid #e2e8f0', borderRadius: 1 }}>
+                <TextField size="small" label="Title (e.g. Monthly [1 Month])" value={v.name} onChange={(e) => formik.setFieldValue(`variants[${i}].name`, e.target.value)} sx={{ flex: 1.5 }} />
+                <TextField size="small" select label="Cycle" value={v.billingCycle} onChange={(e) => formik.setFieldValue(`variants[${i}].billingCycle`, e.target.value)} sx={{ flex: 1 }}>
                   <MenuItem value="monthly">Monthly</MenuItem>
+                  <MenuItem value="half-yearly">Half Yearly</MenuItem>
                   <MenuItem value="yearly">Yearly</MenuItem>
+                  <MenuItem value="one-time">One Time</MenuItem>
                 </TextField>
-              </Grid>
-            </Grid>
+                <TextField size="small" type="number" label="Days" value={v.durationDays} onChange={(e) => formik.setFieldValue(`variants[${i}].durationDays`, Number(e.target.value))} sx={{ flex: 1 }} />
+                <TextField size="small" type="number" label="Price (₹)" value={v.price} onChange={(e) => formik.setFieldValue(`variants[${i}].price`, Number(e.target.value))} sx={{ flex: 1 }} />
+                <IconButton color="error" onClick={() => {
+                  const newV = [...formik.values.variants];
+                  newV.splice(i, 1);
+                  formik.setFieldValue('variants', newV);
+                }}>
+                  <DeleteIcon />
+                </IconButton>
+              </Box>
+            ))}
+            
+            {formik.values.variants.length === 0 && (
+              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mb: 2 }}>No variants added. Click "Add Variant" to define billing cycles.</Typography>
+            )}
+
             <TextField
               fullWidth margin="normal" label="Display Order" type="number"
               name="displayOrder" value={formik.values.displayOrder} onChange={formik.handleChange}

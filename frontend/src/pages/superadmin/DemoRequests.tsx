@@ -22,9 +22,20 @@ const DemoRequests = () => {
     dispatch(fetchDemoRequests());
   }, [dispatch]);
 
-  const handleApprove = async (id: string) => {
+  const [approveModalOpen, setApproveModalOpen] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState('');
+  const [meetLink, setMeetLink] = useState('https://meet.google.com/phu-sbez-ufu');
+
+  const openApproveModal = (id: string) => {
+    setSelectedRequestId(id);
+    setMeetLink('https://meet.google.com/phu-sbez-ufu');
+    setApproveModalOpen(true);
+  };
+
+  const handleApproveConfirm = async () => {
     try {
-      const data = await dispatch(approveDemoRequest(id)).unwrap();
+      setApproveModalOpen(false);
+      const data = await dispatch(approveDemoRequest({ id: selectedRequestId, meetLink })).unwrap();
       setCredentialsModal({ open: true, email: data.email, password: data.password });
       dispatch(fetchDemoRequests());
       dispatch(showNotification({ message: 'Demo sandbox created successfully' }));
@@ -134,7 +145,7 @@ const DemoRequests = () => {
                           variant="contained" 
                           color="success" 
                           size="small" 
-                          onClick={() => handleApprove(row._id)}
+                          onClick={() => openApproveModal(row._id)}
                           sx={{ textTransform: 'none' }}
                         >
                           Approve
@@ -182,6 +193,29 @@ const DemoRequests = () => {
           </Table>
         </TableContainer>
       </Card>
+
+      <Dialog open={approveModalOpen} onClose={() => setApproveModalOpen(false)}>
+        <DialogTitle>Approve Demo Request</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            This will provision a new demo sandbox for the prospect.
+          </DialogContentText>
+          <TextField
+            fullWidth
+            label="Onboarding Meet Link (Optional)"
+            variant="outlined"
+            value={meetLink}
+            onChange={(e) => setMeetLink(e.target.value)}
+            helperText="Provide a Google Meet or Calendly link for the onboarding call."
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setApproveModalOpen(false)}>Cancel</Button>
+          <Button onClick={handleApproveConfirm} variant="contained" color="success">
+            Provision Sandbox
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={credentialsModal.open} onClose={() => setCredentialsModal({open: false})}>
         <DialogTitle>Sandbox Created!</DialogTitle>

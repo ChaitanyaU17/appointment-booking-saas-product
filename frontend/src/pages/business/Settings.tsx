@@ -234,7 +234,11 @@ export default function Settings() {
                     : (!data?.business?.planId || data.business.planId.price === 0 ? 'Free forever' : `\u20B9${data.business.planId.price} / month`)}
                 </Typography>
                 
-                {data?.business?.trialStatus === 'Active' ? (
+                {data?.business?.isDemoAccount ? (
+                  <Typography variant="body2" color="info.main" sx={{ fontStyle: 'italic' }}>
+                    Demo Sandbox (Plan modifications disabled)
+                  </Typography>
+                ) : data?.business?.trialStatus === 'Active' ? (
                   <Typography variant="body2" color="secondary" sx={{ fontStyle: 'italic' }}>
                     Your trial ends in {Math.max(0, Math.ceil((new Date(data.business.trialEndsAt).getTime() - new Date().getTime()) / 86400000))} days. Please contact support to upgrade.
                   </Typography>

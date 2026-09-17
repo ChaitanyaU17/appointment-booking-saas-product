@@ -10,6 +10,13 @@ export interface IBusiness extends Document {
   phone?: string;
   logo?: string;
   planId?: mongoose.Types.ObjectId;
+  planVariantId?: mongoose.Types.ObjectId;
+  planStartDate?: Date;
+  planEndDate?: Date;
+  discountPercentage?: number;
+  paymentStatus?: 'Pending' | 'Paid' | 'Failed';
+  paymentReferenceId?: string;
+  paymentMethod?: string;
   
   verificationStatus: 'Pending' | 'ChangesRequested' | 'Approved' | 'Rejected';
   rejectionReason?: string;
@@ -24,8 +31,9 @@ export interface IBusiness extends Document {
   trialEndsAt?: Date;
   originalPlanId?: mongoose.Types.ObjectId;
   isDemoAccount?: boolean;
-  
-
+  demoStatus?: 'None' | 'Provided' | 'Conducted';
+  demoBusinessId?: mongoose.Types.ObjectId;
+  onboardingMeetLink?: string;
 
   subscriptionStatus: 'active' | 'expired' | 'trial' | 'cancelled';
   subscriptionStart?: Date;
@@ -55,6 +63,13 @@ const businessSchema: Schema = new Schema({
   phone: { type: String },
   logo: { type: String },
   planId: { type: Schema.Types.ObjectId, ref: 'Plan', default: null },
+  planVariantId: { type: Schema.Types.ObjectId, default: null },
+  planStartDate: { type: Date },
+  planEndDate: { type: Date },
+  discountPercentage: { type: Number, default: 0 },
+  paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Failed'], default: 'Pending' },
+  paymentReferenceId: { type: String },
+  paymentMethod: { type: String },
 
   verificationStatus: { type: String, enum: ['Pending', 'ChangesRequested', 'Approved', 'Rejected'], default: 'Pending' },
   rejectionReason: { type: String },
@@ -69,8 +84,9 @@ const businessSchema: Schema = new Schema({
   trialEndsAt: { type: Date },
   originalPlanId: { type: Schema.Types.ObjectId, ref: 'Plan', default: null },
   isDemoAccount: { type: Boolean, default: false },
-
-
+  demoStatus: { type: String, enum: ['None', 'Provided', 'Conducted'], default: 'None' },
+  demoBusinessId: { type: Schema.Types.ObjectId, ref: 'Business', default: null },
+  onboardingMeetLink: { type: String },
 
   subscriptionStatus: { type: String, enum: ['active', 'expired', 'trial', 'cancelled'], default: 'active' },
   subscriptionStart: { type: Date, default: Date.now },

@@ -4,6 +4,7 @@ import {
   fetchAdminsApi, createAdminApi, updateAdminApi, deleteAdminApi,
   approveBusinessApi, rejectBusinessApi, requestChangesBusinessApi,
   activateTrialApi,
+  createDemoForRegistrationApi, markDemoConductedApi,
   fetchDemoRequestsApi, approveDemoRequestApi, rejectDemoRequestApi, deleteDemoRequestApi
 } from "./superadminApi";
 import {
@@ -159,6 +160,42 @@ export const activateTrial = createAsyncThunk(
   }
 );
 
+export const createDemoForRegistration = createAsyncThunk(
+  "superadmin/createDemoForRegistration",
+  async (payload: { id: string, data: { meetLink?: string } }, { rejectWithValue }) => {
+    try {
+      const data = await createDemoForRegistrationApi(payload.id, payload.data);
+      return data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || "Failed to create demo");
+    }
+  }
+);
+
+export const markDemoConducted = createAsyncThunk(
+  "superadmin/markDemoConducted",
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const data = await markDemoConductedApi(id);
+      return data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || "Failed to mark demo as conducted");
+    }
+  }
+);
+
+export const approveDemoRequest = createAsyncThunk(
+  "superadmin/approveDemoRequest",
+  async (payload: { id: string, meetLink?: string }, { rejectWithValue }) => {
+    try {
+      const data = await approveDemoRequestApi(payload.id, { meetLink: payload.meetLink });
+      return data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || "Failed to approve request");
+    }
+  }
+);
+
 export const fetchAdmins = createAsyncThunk(
   'superadmin/fetchAdmins',
   async (_, { rejectWithValue }) => {
@@ -267,17 +304,6 @@ export const fetchDemoRequests = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       return await fetchDemoRequestsApi();
-    } catch (error: any) {
-      return rejectWithValue(error?.response?.data?.message || error?.message);
-    }
-  }
-);
-
-export const approveDemoRequest = createAsyncThunk(
-  'superadmin/approveDemoRequest',
-  async (id: string, { rejectWithValue }) => {
-    try {
-      return await approveDemoRequestApi(id);
     } catch (error: any) {
       return rejectWithValue(error?.response?.data?.message || error?.message);
     }

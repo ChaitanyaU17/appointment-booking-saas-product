@@ -349,7 +349,7 @@ export default function Register() {
                       </MenuItem>
                       {plans.map((plan: any) => (
                         <MenuItem key={plan._id} value={plan._id}>
-                          {plan.name} - ₹{plan.price}/{plan.billingCycle}
+                          {plan.name} {plan.variants && plan.variants.length > 0 ? ` - Starts at ₹${Math.min(...plan.variants.map((v: any) => v.price))}` : (plan.price ? ` - ₹${plan.price}` : '')}
                         </MenuItem>
                       ))}
                     </TextField>

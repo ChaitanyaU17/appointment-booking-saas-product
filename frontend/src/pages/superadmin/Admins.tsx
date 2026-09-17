@@ -40,9 +40,9 @@ const Admins = () => {
     return true;
   });
 
-  const formattedBusinesses = businesses.filter((b: any) => b.verificationStatus === 'Approved').map((b: any) => ({
+  const formattedBusinesses = businesses.map((b: any) => ({
     _id: b.id || b._id,
-    name: b.name
+    name: b.verificationStatus === 'Approved' ? b.name : `${b.name} (${b.verificationStatus})`
   }));
 
   const adminFormik = useFormik({

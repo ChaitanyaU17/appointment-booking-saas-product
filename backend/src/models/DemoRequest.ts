@@ -10,6 +10,7 @@ export interface IDemoRequest extends Document {
   status: 'Pending' | 'Approved' | 'Rejected';
   demoEmail?: string;
   demoPassword?: string;
+  meetLink?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +25,7 @@ const demoRequestSchema: Schema = new Schema({
   status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
   demoEmail: { type: String },
   demoPassword: { type: String },
+  meetLink: { type: String },
 }, { timestamps: true });
 
 export default mongoose.model<IDemoRequest>('DemoRequest', demoRequestSchema);

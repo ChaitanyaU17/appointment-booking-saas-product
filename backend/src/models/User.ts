@@ -13,6 +13,7 @@ export interface IUser extends Document {
   password?: string;
   role: UserRole;
   businessId?: mongoose.Types.ObjectId;
+  originalBusinessId?: mongoose.Types.ObjectId;
   googleCalendarToken?: {
     access_token: string;
     refresh_token?: string;
@@ -32,6 +33,7 @@ const userSchema: Schema = new Schema({
   password: { type: String },
   role: { type: String, enum: Object.values(UserRole), required: true },
   businessId: { type: Schema.Types.ObjectId, ref: 'Business', default: null },
+  originalBusinessId: { type: Schema.Types.ObjectId, ref: 'Business', default: null },
   googleCalendarToken: { type: Object, default: null }
 }, {
   timestamps: true

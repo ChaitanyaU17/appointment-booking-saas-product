@@ -125,6 +125,8 @@ export const getBusinessDashboardStats = async (req: Request, res: Response): Pr
       trialStatus: business.trialStatus,
       trialDaysLeft,
       planName: plan?.name || null,
+      isDemoAccount: business.isDemoAccount,
+      onboardingMeetLink: business.onboardingMeetLink,
       typeData: [
         { name: 'Walk-in', value: totalWalkins },
         { name: 'Online', value: totalOnline }

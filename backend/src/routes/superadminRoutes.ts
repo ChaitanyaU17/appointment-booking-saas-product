@@ -13,6 +13,8 @@ import {
   rejectBusiness,
   requestBusinessChanges,
   activateTrial,
+  createDemoForRegistration,
+  markDemoConducted,
   getDemoRequests,
   approveDemoRequest,
   rejectDemoRequest,
@@ -39,6 +41,8 @@ router.put('/businesses/:id/approve', approveBusiness);
 router.put('/businesses/:id/reject', rejectBusiness);
 router.put('/businesses/:id/request-changes', requestBusinessChanges);
 router.put('/businesses/:id/activate-trial', activateTrial);
+router.post('/businesses/:id/create-demo', createDemoForRegistration);
+router.put('/businesses/:id/mark-demo-conducted', markDemoConducted);
 
 router.route('/admins')
   .get(getBusinessAdmins)

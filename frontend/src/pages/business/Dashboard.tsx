@@ -115,7 +115,20 @@ export default function BusinessDashboard() {
 
   return (
     <Box>
-      {stats?.trialStatus === "Active" && (
+      {stats?.isDemoAccount && (
+        <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
+          <Typography variant="body1" sx={{ fontWeight: 600 }}>Welcome to your Demo Sandbox!</Typography>
+          <Typography variant="body2">
+            This is a fully-configured demo environment with sample data for you to explore.
+            {stats.onboardingMeetLink && (
+              <span style={{ display: 'block', marginTop: '8px' }}>
+                <strong>Your Onboarding Meeting:</strong> Join your team for a walkthrough at <a href={stats.onboardingMeetLink} target="_blank" rel="noreferrer">{stats.onboardingMeetLink}</a>
+              </span>
+            )}
+          </Typography>
+        </Alert>
+      )}
+      {!stats?.isDemoAccount && stats?.trialStatus === "Active" && (
         <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
           You are on a free trial of the <b>{stats.planName}</b> plan — ends in {stats.trialDaysLeft} day(s).
         </Alert>

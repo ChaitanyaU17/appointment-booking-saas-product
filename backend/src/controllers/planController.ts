@@ -34,7 +34,7 @@ export const getPlanById = async (req: Request, res: Response): Promise<any> => 
 
 export const createPlan = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { name, slug, price, currency, billingCycle, isActive, isDefault, features, displayOrder } = req.body;
+    const { name, slug, price, currency, billingCycle, isActive, isDefault, features, displayOrder, variants } = req.body;
 
     const exists = await Plan.findOne({ $or: [{ name }, { slug }] });
     if (exists) {
@@ -55,6 +55,7 @@ export const createPlan = async (req: Request, res: Response): Promise<any> => {
       isDefault,
       features,
       displayOrder,
+      variants: variants || []
     });
 
     const createdPlan = await plan.save();
@@ -66,7 +67,7 @@ export const createPlan = async (req: Request, res: Response): Promise<any> => {
 
 export const updatePlan = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { name, slug, price, currency, billingCycle, isActive, isDefault, features, displayOrder } = req.body;
+    const { name, slug, price, currency, billingCycle, isActive, isDefault, features, displayOrder, variants } = req.body;
     const plan = await Plan.findById(req.params.id);
 
     if (!plan) {
@@ -86,6 +87,7 @@ export const updatePlan = async (req: Request, res: Response): Promise<any> => {
     plan.isDefault = isDefault ?? plan.isDefault;
     plan.features = features ?? plan.features;
     plan.displayOrder = displayOrder ?? plan.displayOrder;
+    if (variants !== undefined) plan.variants = variants;
 
     const updatedPlan = await plan.save();
     const businessCount = await Business.countDocuments({ planId: updatedPlan._id });
