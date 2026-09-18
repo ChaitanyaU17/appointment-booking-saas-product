@@ -400,32 +400,32 @@ function PricingSection() {
                 >
                   <Card sx={{
                     height: '100%', p: 4, display: 'flex', flexDirection: 'column',
-                    border: plan.price > 0 && i === 1 ? '2px solid' : '1px solid',
-                    borderColor: plan.price > 0 && i === 1 ? 'primary.main' : 'rgba(15,23,42,0.08)',
-                    boxShadow: plan.price > 0 && i === 1 ? '0 20px 40px rgba(101,146,135,0.15)' : '0 10px 30px rgba(15,23,42,0.03)',
+                    border: plan.oneTimeFee > 0 && i === 1 ? '2px solid' : '1px solid',
+                    borderColor: plan.oneTimeFee > 0 && i === 1 ? 'primary.main' : 'rgba(15,23,42,0.08)',
+                    boxShadow: plan.oneTimeFee > 0 && i === 1 ? '0 20px 40px rgba(101,146,135,0.15)' : '0 10px 30px rgba(15,23,42,0.03)',
                     position: 'relative',
                     overflow: 'visible'
                   }}>
-                    {plan.price > 0 && i === 1 && (
+                    {plan.oneTimeFee > 0 && i === 1 && (
                       <Chip label="Most Popular" color="primary" size="small" sx={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', fontWeight: 700 }} />
                     )}
                     <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>{plan.name}</Typography>
                     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mb: 3 }}>
                       <Typography variant="h3" sx={{ fontWeight: 800 }}>
-                        {plan.price === 0 ? 'Free' : `₹${plan.price}`}
+                        {plan.oneTimeFee === 0 ? 'Free' : `₹${plan.oneTimeFee}`}
                       </Typography>
-                      {plan.price > 0 && <Typography color="text.secondary">/mo</Typography>}
+                      {plan.oneTimeFee > 0 && <Typography color="text.secondary">/mo</Typography>}
                     </Box>
 
                     <Button
-                      variant={plan.price > 0 && i === 1 ? 'contained' : 'outlined'}
+                      variant={plan.oneTimeFee > 0 && i === 1 ? 'contained' : 'outlined'}
                       color="primary"
                       fullWidth
                       size="large"
                       onClick={() => navigate('/register')}
                       sx={{ mb: 4, fontWeight: 700, borderRadius: 2 }}
                     >
-                      {plan.price === 0 ? 'Get Started' : 'Start Free Trial'}
+                      {plan.oneTimeFee === 0 ? 'Get Started' : 'Start Free Trial'}
                     </Button>
 
                     <Box sx={{ flexGrow: 1 }}>
@@ -435,37 +435,37 @@ function PricingSection() {
                       <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                         <ListItem disablePadding sx={{ alignItems: 'flex-start' }}>
                           <ListItemIcon sx={{ minWidth: 32, mt: 0.5 }}><CheckCircleIcon color="primary" fontSize="small" /></ListItemIcon>
-                          <ListItemText primary={<Typography variant="body2" sx={{ fontWeight: 600 }}>{`${plan.features.maxBookingsPerMonth >= 9999 ? 'Unlimited' : plan.features.maxBookingsPerMonth} bookings/mo`}</Typography>} />
+                          <ListItemText primary={<Typography variant="body2" sx={{ fontWeight: 600 }}>{`${plan.planLimits?.maxBookingsPerMonth || 0 >= 9999 ? 'Unlimited' : plan.planLimits?.maxBookingsPerMonth || 0} bookings/mo`}</Typography>} />
                         </ListItem>
                         <ListItem disablePadding sx={{ alignItems: 'flex-start' }}>
                           <ListItemIcon sx={{ minWidth: 32, mt: 0.5 }}><CheckCircleIcon color="primary" fontSize="small" /></ListItemIcon>
-                          <ListItemText primary={<Typography variant="body2" sx={{ fontWeight: 600 }}>{`${plan.features.maxServices >= 9999 ? 'Unlimited' : plan.features.maxServices} services`}</Typography>} />
+                          <ListItemText primary={<Typography variant="body2" sx={{ fontWeight: 600 }}>{`${plan.planLimits?.maxServices || 0 >= 9999 ? 'Unlimited' : plan.planLimits?.maxServices || 0} services`}</Typography>} />
                         </ListItem>
-                        {plan.features.maxAdmins > 1 && (
+                        {plan.planLimits?.maxAdmins || 0 > 1 && (
                           <ListItem disablePadding sx={{ alignItems: 'flex-start' }}>
                             <ListItemIcon sx={{ minWidth: 32, mt: 0.5 }}><CheckCircleIcon color="primary" fontSize="small" /></ListItemIcon>
-                            <ListItemText primary={<Typography variant="body2" sx={{ fontWeight: 600 }}>{`Up to ${plan.features.maxAdmins >= 9999 ? 'Unlimited' : plan.features.maxAdmins} admins`}</Typography>} />
+                            <ListItemText primary={<Typography variant="body2" sx={{ fontWeight: 600 }}>{`Up to ${plan.planLimits?.maxAdmins || 0 >= 9999 ? 'Unlimited' : plan.planLimits?.maxAdmins || 0} admins`}</Typography>} />
                           </ListItem>
                         )}
-                        {plan.features.googleCalendarSync && (
+                        {plan.controls?.includes('Google Calendar Sync') && (
                           <ListItem disablePadding sx={{ alignItems: 'flex-start' }}>
                             <ListItemIcon sx={{ minWidth: 32, mt: 0.5 }}><CheckCircleIcon color="primary" fontSize="small" /></ListItemIcon>
                             <ListItemText primary={<Typography variant="body2" sx={{ fontWeight: 600 }}>Google Calendar Sync</Typography>} />
                           </ListItem>
                         )}
-                        {plan.features.googleMeetIntegration && (
+                        {plan.controls?.includes('Google Meet Integration') && (
                           <ListItem disablePadding sx={{ alignItems: 'flex-start' }}>
                             <ListItemIcon sx={{ minWidth: 32, mt: 0.5 }}><CheckCircleIcon color="primary" fontSize="small" /></ListItemIcon>
                             <ListItemText primary={<Typography variant="body2" sx={{ fontWeight: 600 }}>Auto Google Meet Links</Typography>} />
                           </ListItem>
                         )}
-                        {plan.features.customBranding && (
+                        {plan.controls?.includes('Custom Branding') && (
                           <ListItem disablePadding sx={{ alignItems: 'flex-start' }}>
                             <ListItemIcon sx={{ minWidth: 32, mt: 0.5 }}><CheckCircleIcon color="primary" fontSize="small" /></ListItemIcon>
                             <ListItemText primary={<Typography variant="body2" sx={{ fontWeight: 600 }}>Custom Branding</Typography>} />
                           </ListItem>
                         )}
-                        {plan.features.prioritySupport && (
+                        {plan.controls?.includes('Priority Support') && (
                           <ListItem disablePadding sx={{ alignItems: 'flex-start' }}>
                             <ListItemIcon sx={{ minWidth: 32, mt: 0.5 }}><CheckCircleIcon color="primary" fontSize="small" /></ListItemIcon>
                             <ListItemText primary={<Typography variant="body2" sx={{ fontWeight: 600 }}>Priority Support</Typography>} />

@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from "react";
+﻿import React, { useState, useMemo } from "react";
 import {
   Box, Typography, Button, IconButton, Collapse, Paper, Chip,
-  TextField, Stack, Divider, alpha, InputAdornment
+  TextField, Stack, Divider, alpha, InputAdornment, Grid
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -22,7 +22,7 @@ import ConfirmationNumberOutlinedIcon from "@mui/icons-material/ConfirmationNumb
 import AutorenewIcon from "@mui/icons-material/Autorenew";
 
 const TONE: Record<string, { color: string; soft: string; border: string }> = {
-  success: { color: "#5c9a6e", soft: "rgba(92, 154, 110, 0.1)", border: "#B1D3B9" },
+  success: { color: "#659287", soft: "rgba(101, 146, 135, 0.1)", border: "#88BDA4" },
   warning: { color: "#ed6c02", soft: "rgba(237, 108, 2, 0.1)", border: "#ffb74d" },
   error:   { color: "#d32f2f", soft: "rgba(211, 47, 47, 0.1)", border: "#ef5350" },
   info:    { color: "#659287", soft: "rgba(101, 146, 135, 0.1)", border: "#88BDA4" },
@@ -149,7 +149,7 @@ const TimelineItem = ({
   done?: boolean; error?: boolean; active?: boolean;
   title: string; caption: string; isLast?: boolean;
 }) => {
-  const color = error ? "#dc2626" : done ? "#5c9a6e" : active ? "#659287" : "#cbd5e1";
+  const color = error ? "#dc2626" : done ? "#659287" : active ? "#659287" : "#cbd5e1";
   return (
     <Box sx={{ display: "flex", gap: 1.75 }}>
       <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -169,7 +169,7 @@ const TimelineItem = ({
           )}
         </Box>
         {!isLast && (
-          <Box sx={{ flex: 1, width: 2, my: 0.5, minHeight: 14, bgcolor: done ? alpha("#5c9a6e", 0.3) : "#e9edf3" }} />
+          <Box sx={{ flex: 1, width: 2, my: 0.5, minHeight: 14, bgcolor: done ? alpha("#659287", 0.3) : "#e9edf3" }} />
         )}
       </Box>
       <Box sx={{ pb: isLast ? 0 : 2.25 }}>
@@ -236,8 +236,18 @@ const RegistrationPipeline: React.FC<PipelineProps> = ({
   const [expanded, setExpanded] = useState<number | false>(activeStep);
   const [isChangingPlan, setIsChangingPlan] = useState<boolean>(false);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
-  const [couponInput, setCouponInput] = useState<string>("");
   const [gstRate, setGstRate] = useState<number>(18);
+  const [couponInput, setCouponInput] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState<string>(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  React.useEffect(() => {
+    if (reviewPlanId && isChangingPlan) {
+      const sp = plans.find((p: any) => p._id === reviewPlanId);
+      const sv = sp?.variants?.find((v: any) => v._id === reviewVariantId) || sp?.variants?.[0];
+      const dur = sv ? (sv.durationDays || 30) : 30;
+      setEndDate(new Date(Date.now() + dur * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+    }
+  }, [reviewPlanId, reviewVariantId, isChangingPlan, plans]);
 
   React.useEffect(() => {
     setExpanded(activeStep);
@@ -347,9 +357,9 @@ const RegistrationPipeline: React.FC<PipelineProps> = ({
                 />
                 <DetailItem
                   icon={<PhoneIcon sx={{ fontSize: 18 }} />}
-                  label="Phone / Owner"
-                  value={`${business.phone || "—"} · ${business.ownerName || "—"}`}
-                  accent="#5c9a6e"
+                  label="Phone"
+                  value= {business.phone || "—"}
+                  accent="#659287"
                 />
                 <DetailItem
                   icon={<BadgeIcon sx={{ fontSize: 18 }} />}
@@ -411,7 +421,7 @@ const RegistrationPipeline: React.FC<PipelineProps> = ({
                     disabled={demoLoading || !demoMeetLink}
                     sx={{textTransform: "none", fontWeight: 700, borderRadius: 1.5, px: 2.5, boxShadow: "none"}}
                   >
-                    {demoLoading ? "Provisioning…" : "Provision Demo Sandbox"}
+                    {demoLoading ? "Provisioning.." : "Provision Demo Sandbox"}
                   </Button>
                 </Box>
               ) : (
@@ -472,7 +482,7 @@ const RegistrationPipeline: React.FC<PipelineProps> = ({
                   onClick={onMarkConducted}
                   sx={{textTransform: "none", fontWeight: 700, borderRadius: 1.5, px: 2.5, boxShadow: "none"}}
                 >
-                  {isDemoConducted ? "Conducted ✓" : "Mark as Conducted"}
+                  {isDemoConducted ? "Conducted" : "Mark as Conducted"}
                 </Button>
               </Box>
             </StageSection>
@@ -491,13 +501,13 @@ const RegistrationPipeline: React.FC<PipelineProps> = ({
                   {plans.filter(p => p.isActive).map((plan: any) => {
                   const isPlanSelected = reviewPlanId === plan._id;
                   return (
-                    <Box key={plan._id} sx={{ border: "2px solid", borderColor: isPlanSelected ? "#5c9a6e" : "#e2e8f0", borderRadius: 2, p: 2, cursor: "pointer", transition: "all 0.2s", "&:hover": { borderColor: isPlanSelected ? "#5c9a6e" : "#cbd5e1" } }}>
+                    <Box key={plan._id} sx={{ border: "2px solid", borderColor: isPlanSelected ? "#659287" : "#e2e8f0", borderRadius: 2, p: 2, cursor: "pointer", transition: "all 0.2s", "&:hover": { borderColor: isPlanSelected ? "#659287" : "#cbd5e1" } }}>
                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                           <Typography sx={{ fontSize: 13, fontWeight: 800, textTransform: "uppercase", color: "text.primary" }}>{plan.name}</Typography>
-                          {plan.isDefault && <Chip label="PRIMARY" size="small" sx={{ height: 18, fontSize: 9, fontWeight: 800, bgcolor: "#5c9a6e", color: "#fff" }} />}
+                          {plan.isDefault && <Chip label="PRIMARY" size="small" sx={{ height: 18, fontSize: 9, fontWeight: 800, bgcolor: "#659287", color: "#fff" }} />}
                         </Box>
-                        {isPlanSelected && <CheckRoundedIcon sx={{ color: "#5c9a6e", fontSize: 20 }} />}
+                        {isPlanSelected && <CheckRoundedIcon sx={{ color: "#659287", fontSize: 20 }} />}
                       </Box>
                       
                       <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
@@ -510,29 +520,44 @@ const RegistrationPipeline: React.FC<PipelineProps> = ({
                       <Typography sx={{ fontSize: 11, fontWeight: 700, color: "text.secondary", mb: 1.5, textTransform: "uppercase" }}>Select Plan Variant</Typography>
                       
                       <Stack spacing={1}>
-                        {plan.variants?.map((v: any) => {
-                          const isVariantSelected = reviewVariantId === v._id;
-                          const total = v.price * 1.18;
-                          const perDay = (total / (v.durationDays || 30)).toFixed(2);
-                          
-                          return (
-                            <Box 
-                              key={v._id} 
-                              onClick={(e) => { e.stopPropagation(); setReviewPlanId(plan._id); setReviewVariantId(v._id); setIsChangingPlan(false); }}
-                              sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 1.5, borderRadius: 1.5, bgcolor: isVariantSelected ? "rgba(92, 154, 110, 0.05)" : "#f8fafc", border: "1px solid", borderColor: isVariantSelected ? "#5c9a6e" : "transparent", cursor: "pointer", "&:hover": { bgcolor: isVariantSelected ? "rgba(92, 154, 110, 0.05)" : "#f1f5f9" } }}
-                            >
+                        {(!plan.variants || plan.variants.length === 0) ? (
+                          <Box 
+                            onClick={(e) => { e.stopPropagation(); setReviewPlanId(plan._id); setReviewVariantId(''); }}
+                            sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 1.5, borderRadius: 1.5, bgcolor: reviewPlanId === plan._id ? "rgba(101, 146, 135, 0.05)" : "#f8fafc", border: "1px solid", borderColor: reviewPlanId === plan._id ? "#659287" : "transparent", cursor: "pointer", "&:hover": { bgcolor: reviewPlanId === plan._id ? "rgba(101, 146, 135, 0.05)" : "#f1f5f9" } }}
+                          >
                                <Box>
-                                 <Typography sx={{ fontSize: 13, fontWeight: 700, color: isVariantSelected ? "#4a6b62" : "text.primary" }}>{v.name}</Typography>
-                                 <Typography sx={{ fontSize: 11, color: "text.secondary", mt: 0.5 }}>Duration: {v.durationDays} days (₹{v.price} base + ₹{(v.price * 0.18).toFixed(2)} GST)</Typography>
+                                 <Typography sx={{ fontSize: 13, fontWeight: 700, color: reviewPlanId === plan._id ? "#4a6b62" : "text.primary" }}>Default (No Variant)</Typography>
+                                 <Typography sx={{ fontSize: 11, color: "text.secondary", mt: 0.5 }}>Duration: Custom (₹{plan.price || 0} base)</Typography>
                                </Box>
                                <Box sx={{ textAlign: "right" }}>
-                                 <Typography sx={{ fontSize: 13, fontWeight: 800, color: "text.primary" }}>₹{total.toFixed(0)}</Typography>
-                                 <Typography sx={{ fontSize: 10, color: "text.secondary", fontWeight: 600 }}>Total + GST: ₹{total.toFixed(2)}</Typography>
-                                 <Typography sx={{ fontSize: 11, color: isVariantSelected ? "#5c9a6e" : "#10b981", fontWeight: 700, mt: 0.25 }}>₹{perDay}/day</Typography>
+                                 <Typography sx={{ fontSize: 13, fontWeight: 800, color: "text.primary" }}>₹{(plan.price || 0).toFixed(0)}</Typography>
                                </Box>
-                            </Box>
-                          );
-                        })}
+                          </Box>
+                        ) : (
+                          plan.variants?.map((v: any) => {
+                            const isVariantSelected = reviewVariantId === v._id;
+                            const total = v.price * 1.18;
+                            const perDay = (total / (v.durationDays || 30)).toFixed(2);
+                            
+                            return (
+                              <Box 
+                                key={v._id} 
+                                onClick={(e) => { e.stopPropagation(); setReviewPlanId(plan._id); setReviewVariantId(v._id); }}
+                                sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 1.5, borderRadius: 1.5, bgcolor: isVariantSelected ? "rgba(101, 146, 135, 0.05)" : "#f8fafc", border: "1px solid", borderColor: isVariantSelected ? "#659287" : "transparent", cursor: "pointer", "&:hover": { bgcolor: isVariantSelected ? "rgba(101, 146, 135, 0.05)" : "#f1f5f9" } }}
+                              >
+                                 <Box>
+                                   <Typography sx={{ fontSize: 13, fontWeight: 700, color: isVariantSelected ? "#4a6b62" : "text.primary" }}>{v.name}</Typography>
+                                   <Typography sx={{ fontSize: 11, color: "text.secondary", mt: 0.5 }}>Duration: {v.durationDays} days (₹{v.price} base + ₹{(v.price * 0.18).toFixed(2)} GST)</Typography>
+                                 </Box>
+                                 <Box sx={{ textAlign: "right" }}>
+                                   <Typography sx={{ fontSize: 13, fontWeight: 800, color: "text.primary" }}>₹{total.toFixed(0)}</Typography>
+                                   <Typography sx={{ fontSize: 10, color: "text.secondary", fontWeight: 600 }}>Total + GST: ₹{total.toFixed(2)}</Typography>
+                                   <Typography sx={{ fontSize: 11, color: isVariantSelected ? "#659287" : "#10b981", fontWeight: 700, mt: 0.25 }}>₹{perDay}/day</Typography>
+                                 </Box>
+                              </Box>
+                            );
+                          })
+                        )}
                       </Stack>
                     </Box>
                   );
@@ -540,12 +565,147 @@ const RegistrationPipeline: React.FC<PipelineProps> = ({
               </Box>
             )}
 
+                        {isChangingPlan && reviewPlanId && (
+              <Box sx={{ mt: 4, pt: 4, borderTop: "1px dashed #e2e8f0" }}>
+                {(() => {
+                  const sp = plans.find(p => p._id === reviewPlanId);
+                  if (!sp) return null;
+                  const sv = sp?.variants?.find((v: any) => v._id === reviewVariantId) || sp?.variants?.[0];
+                  
+                  // Handle plan without variants gracefully
+                  const basePrice = sv ? (sv.price || 0) : (sp.price || 0);
+                  const durationDays = sv ? (sv.durationDays || 30) : 30;
+                  const planVariantName = sv ? `${sp.name} - ${sv.name}` : sp.name;
+
+                  const discountAmount = basePrice * (discountPercent / 100);
+                  const afterDiscount = basePrice - discountAmount;
+                  const gst = afterDiscount * (gstRate / 100);
+                  const total = afterDiscount + gst;
+
+                  return (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {/* 1. Validity Config */}
+                      <Box>
+                        <Typography sx={{ fontSize: 14, fontWeight: 800, mb: 2, color: "#1e293b" }}>Configure Selected Plan Validity</Typography>
+                        <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 2, p: 2, bgcolor: "#fff" }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                            <Typography sx={{ fontSize: 13, fontWeight: 800 }}>{planVariantName}</Typography>
+                            <Chip label={`Validity: ${durationDays} days`} size="small" sx={{ bgcolor: "#e0f2fe", color: "#0369a1", fontWeight: 700, borderRadius: 1.5 }} />
+                          </Box>
+                          <Grid container spacing={2}>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                              <TextField 
+                                fullWidth size="small" type="date" label="Start Date" 
+                                slotProps={{ inputLabel: { shrink: true } }}
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                              />
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                              <TextField 
+                                fullWidth size="small" type="date" label="End Date" 
+                                slotProps={{ inputLabel: { shrink: true } }}
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                              />
+                            </Grid>
+                          </Grid>
+                        </Box>
+                      </Box>
+
+                      {/* 2. Additional Charges & Adjustments */}
+                      <Box>
+                        <Typography sx={{ fontSize: 14, fontWeight: 800, mb: 2, color: "#1e293b" }}>Additional Charges & Adjustments</Typography>
+                        <Grid container spacing={2} sx={{ mb: 2 }}>
+                          <Grid size={{ xs: 12, sm: 6 }}>
+                            <TextField 
+                              fullWidth size="small" type="number" label="Discount (%)" 
+                              value={discountPercent}
+                              onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                            />
+                          </Grid>
+                          <Grid size={{ xs: 12, sm: 6 }}>
+                            <TextField 
+                              fullWidth size="small" type="number" label="GST Rate (%)" 
+                              value={gstRate}
+                              onChange={(e) => setGstRate(Number(e.target.value))}
+                            />
+                          </Grid>
+                        </Grid>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <TextField 
+                            fullWidth size="small" label="Coupon Code" 
+                            value={couponInput}
+                            onChange={(e) => setCouponInput(e.target.value)}
+                          />
+                          <Button variant="contained" disableElevation sx={{ bgcolor: "#e2e8f0", color: "#64748b", fontWeight: 700, px: 3, '&:hover': { bgcolor: "#cbd5e1" } }}>
+                            Apply
+                          </Button>
+                        </Box>
+                      </Box>
+
+                      {/* 3. Billing Rates Summary */}
+                      <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 2, bgcolor: "#f8fafc", overflow: "hidden" }}>
+                        <Box sx={{ px: 2, py: 1.5, borderBottom: "1px solid #e2e8f0" }}>
+                          <Typography sx={{ fontSize: 13, fontWeight: 800, color: "#1e293b" }}>Billing Rates Summary</Typography>
+                        </Box>
+                        <Box sx={{ p: 2 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                            <Typography sx={{ fontSize: 13, fontWeight: 600, color: "#475569" }}>Plan & Addons</Typography>
+                            <Typography sx={{ fontSize: 13, fontWeight: 800, color: "#0ea5e9" }}>₹{afterDiscount.toFixed(2)}</Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                            <Typography sx={{ fontSize: 13, fontWeight: 600, color: "#94a3b8" }}>• Plan GST ({gstRate}%) [Exclusive]</Typography>
+                            <Typography sx={{ fontSize: 13, fontWeight: 800, color: "#ef4444" }}>₹{gst.toFixed(2)}</Typography>
+                          </Box>
+                          <Divider sx={{ my: 1, borderStyle: 'dashed' }} />
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                            <Typography sx={{ fontSize: 14, fontWeight: 800, color: "#16a34a" }}>GRAND TOTAL (PAYABLE)</Typography>
+                            <Typography sx={{ fontSize: 14, fontWeight: 800, color: "#64748b" }}>₹{total.toFixed(2)}</Typography>
+                          </Box>
+                        </Box>
+                      </Box>
+
+                      {/* Action Buttons */}
+                      <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end", mt: 2 }}>
+                        <Button variant="outlined" size="small" sx={{ textTransform: "none", fontWeight: 700, borderRadius: 1.5, bgcolor: "#fff", borderColor: "#659287", color: "#659287" }}>
+                           <ContentCopyIcon sx={{ fontSize: 16, mr: 0.5 }} /> Copy Selection Link
+                        </Button>
+                        <Button variant="outlined" size="small" sx={{ textTransform: "none", fontWeight: 700, borderRadius: 1.5, bgcolor: "#fff", borderColor: "#659287", color: "#659287" }}>
+                           <LinkIcon sx={{ fontSize: 16, mr: 0.5 }} /> Send Selection Link
+                        </Button>
+                        <Button variant="outlined" size="small" onClick={() => setIsChangingPlan(false)} sx={{ textTransform: "none", fontWeight: 700, borderRadius: 1.5, borderColor: "#22c55e", color: "#16a34a" }}>
+                           <CheckRoundedIcon sx={{ fontSize: 16, mr: 0.5 }} /> Save Plan
+                        </Button>
+                        <Button variant="outlined" size="small" sx={{ textTransform: "none", fontWeight: 700, borderRadius: 1.5, borderColor: "#f59e0b", color: "#d97706" }}>
+                           <LinkIcon sx={{ fontSize: 16, mr: 0.5 }} /> Send Payment Link
+                        </Button>
+                        <Button variant="outlined" size="small" sx={{ textTransform: "none", fontWeight: 700, borderRadius: 1.5 }}>
+                           <ContentCopyIcon sx={{ fontSize: 16, mr: 0.5 }} /> Copy Payment Link
+                        </Button>
+                        <Button variant="text" color="error" size="small" onClick={() => setIsChangingPlan(false)} sx={{ textTransform: "none", fontWeight: 700, borderRadius: 1.5 }}>
+                           Cancel Change
+                        </Button>
+                        <Button variant="contained" color="primary" size="small" disableElevation sx={{ textTransform: "none", fontWeight: 700, borderRadius: 1.5 }}>
+                           <CreditCardIcon sx={{ fontSize: 16, mr: 0.5 }} /> Collect Payment
+                        </Button>
+                      </Box>
+                    </Box>
+                  );
+                })()}
+              </Box>
+            )}
+
             {(() => {
               const selectedPlan = plans.find(p => p._id === reviewPlanId);
+              if (!selectedPlan) return null;
                 const selectedVariant = selectedPlan?.variants?.find((v: any) => v._id === reviewVariantId) || selectedPlan?.variants?.[0];
-                if (!selectedVariant) return null;
                 
-                const basePrice = selectedVariant.price || 0;
+                const basePrice = selectedVariant ? (selectedVariant.price || 0) : (selectedPlan.price || 0);
+                const isCustom = !selectedVariant;
+                const durationDays = selectedVariant ? selectedVariant.durationDays : 30;
+                
+
                 const discountAmount = basePrice * (discountPercent / 100);
                 const afterDiscount = basePrice - discountAmount;
                 const gst = afterDiscount * (gstRate / 100);
@@ -553,116 +713,67 @@ const RegistrationPipeline: React.FC<PipelineProps> = ({
                 
                 return (
                   
-                  <Box sx={{ bgcolor: "rgba(92, 154, 110, 0.08)", borderRadius: 2, p: 3, border: "1px solid #B1D3B9" }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-                      <Typography sx={{ fontSize: 13, fontWeight: 800, color: "#4a6b62", letterSpacing: 0.5 }}>CURRENTLY SELECTED PLAN</Typography>
-                      <Chip label="PENDING PAYMENT" size="small" sx={{ bgcolor: "warning.light", color: "#fff", fontWeight: 800, fontSize: 10, borderRadius: 1 }} />
-                    </Box>
-
-                    <Stack spacing={1.5}>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                          <BusinessIcon sx={{ fontSize: 16, color: "text.secondary" }} />
-                          <Typography sx={{ fontSize: 13, color: "text.secondary", fontWeight: 600 }}>Business</Typography>
-                        </Box>
-                        <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary" }}>{business.name || "N/A"}</Typography>
-                      </Box>
-                      
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                          <BadgeIcon sx={{ fontSize: 16, color: "text.secondary" }} />
-                          <Typography sx={{ fontSize: 13, color: "text.secondary", fontWeight: 600 }}>Selected Plan</Typography>
-                        </Box>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                          <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary" }}>{selectedPlan.name}</Typography>
-                          <Chip label={selectedVariant.name} size="small" sx={{ height: 20, fontSize: 10, bgcolor: "rgba(92, 154, 110, 0.1)", color: "#4a6b62", fontWeight: 700, border: "1px solid #B1D3B9" }} />
-                        </Box>
-                      </Box>
-
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                          <CalendarTodayRoundedIcon sx={{ fontSize: 16, color: "text.secondary" }} />
-                          <Typography sx={{ fontSize: 13, color: "text.secondary", fontWeight: 600 }}>Billing Period</Typography>
-                        </Box>
-                        <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary" }}>{selectedVariant.billingCycle === 'monthly' ? '1 Month' : selectedVariant.billingCycle === 'yearly' ? '1 Year' : selectedVariant.billingCycle === 'half-yearly' ? '6 Months' : 'Custom'}</Typography>
-                      </Box>
-
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                          <EventAvailableOutlinedIcon sx={{ fontSize: 16, color: "text.secondary" }} />
-                          <Typography sx={{ fontSize: 13, color: "text.secondary", fontWeight: 600 }}>Total Validity</Typography>
-                        </Box>
-                        <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary" }}>{selectedVariant.durationDays} Days</Typography>
-                      </Box>
-                    </Stack>
-
-                    <Divider sx={{ my: 3, borderStyle: "dashed", borderColor: "#B1D3B9" }} />
-
-                    <Typography sx={{ fontSize: 12, fontWeight: 800, color: "#4a6b62", mb: 2 }}>PRICE BREAKDOWN</Typography>
-
-                    <Stack spacing={1.5} sx={{ mb: 3 }}>
-                      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                        <Typography sx={{ fontSize: 13, color: "text.primary", fontWeight: 600 }}>Plan Amount</Typography>
-                        <Typography sx={{ fontSize: 13, fontWeight: 800, color: "text.primary" }}>₹{basePrice.toFixed(2)}</Typography>
-                      </Box>
-                      
-                      {discountAmount > 0 && (
-                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                           <Typography sx={{ fontSize: 13, color: "#ef4444" }}>Discount (-{discountPercent}%)</Typography>
-                           <Typography sx={{ fontSize: 13, fontWeight: 800, color: "#ef4444" }}>-₹{discountAmount.toFixed(2)}</Typography>
-                        </Box>
-                      )}
-
-                      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                        <Typography sx={{ fontSize: 13, color: "text.primary", fontWeight: 600 }}>Subtotal</Typography>
-                        <Typography sx={{ fontSize: 13, fontWeight: 800, color: "text.primary" }}>₹{afterDiscount.toFixed(2)}</Typography>
-                      </Box>
-
-                      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                        <Typography sx={{ fontSize: 13, color: "text.primary", fontWeight: 600 }}>GST ({gstRate}% on Subtotal)</Typography>
-                        <Typography sx={{ fontSize: 13, fontWeight: 800, color: "text.primary" }}>₹{gst.toFixed(2)}</Typography>
-                      </Box>
-
-                      <Box sx={{ display: "flex", justifyContent: "space-between", bgcolor: "rgba(92, 154, 110, 0.15)", p: 1.5, borderRadius: 1.5, border: "1px solid #B1D3B9", mt: 1 }}>
-                         <Typography sx={{ fontSize: 14, color: "#4a6b62", fontWeight: 800 }}>Total Amount (incl. GST)</Typography>
-                         <Typography sx={{ fontSize: 15, fontWeight: 800, color: "#4a6b62" }}>₹{total.toFixed(2)}</Typography>
-                      </Box>
-                    </Stack>
+                  <Box sx={{ bgcolor: "rgba(101, 146, 135, 0.08)", borderRadius: 2, p: 3, border: "1px solid #88BDA4" }}>
+                    <Typography sx={{ fontSize: 13, fontWeight: 800, color: "#4a6b62", letterSpacing: 0.5, mb: 3 }}>CURRENTLY SELECTED PLAN</Typography>
                     
-                    <Divider sx={{ my: 3, borderStyle: "dashed", borderColor: "#B1D3B9" }} />
+                    <Grid container spacing={3} sx={{ mb: 4 }}>
+                       <Grid size={{ xs: 12, sm: 4 }}>
+                         <Typography sx={{ fontSize: 11, fontWeight: 700, color: "text.secondary", mb: 0.5 }}>PLAN NAME</Typography>
+                         <Typography sx={{ fontSize: 13, fontWeight: 800, color: "text.primary" }}>{selectedPlan.name}</Typography>
+                       </Grid>
+                       <Grid size={{ xs: 12, sm: 4 }}>
+                         <Typography sx={{ fontSize: 11, fontWeight: 700, color: "text.secondary", mb: 0.5 }}>PRICE</Typography>
+                         <Typography sx={{ fontSize: 13, fontWeight: 800, color: "text.primary" }}>
+                           {discountPercent > 0 ? (
+                             <>₹{afterDiscount.toFixed(2)} <span style={{ textDecoration: 'line-through', color: '#94a3b8', marginLeft: 4 }}>₹{basePrice.toFixed(2)}</span></>
+                           ) : (
+                             `₹${basePrice.toFixed(2)}`
+                           )}
+                         </Typography>
+                       </Grid>
+                       <Grid size={{ xs: 12, sm: 4 }}>
+                         <Typography sx={{ fontSize: 11, fontWeight: 700, color: "text.secondary", mb: 0.5 }}>DURATION</Typography>
+                         <Typography sx={{ fontSize: 13, fontWeight: 800, color: "text.primary" }}>
+                           {isCustom ? 'Custom' : selectedVariant.billingCycle === 'monthly' ? '1 Month(s)' : selectedVariant.billingCycle === 'yearly' ? '1 Year(s)' : selectedVariant.billingCycle === 'half-yearly' ? '6 Month(s)' : 'Custom'}
+                         </Typography>
+                       </Grid>
+                       <Grid size={{ xs: 12, sm: 4 }}>
+                         <Typography sx={{ fontSize: 11, fontWeight: 700, color: "text.secondary", mb: 0.5 }}>VALIDITY</Typography>
+                         <Typography sx={{ fontSize: 13, fontWeight: 800, color: "primary.main" }}>
+                           {durationDays} Days {discountPercent > 0 && `(+ Bonus Coupon Applied)`}
+                         </Typography>
+                       </Grid>
+                       <Grid size={{ xs: 12, sm: 4 }}>
+                         <Typography sx={{ fontSize: 11, fontWeight: 700, color: "text.secondary", mb: 0.5 }}>DATE SELECTED</Typography>
+                         <Typography sx={{ fontSize: 13, fontWeight: 800, color: "text.primary" }}>
+                           {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                         </Typography>
+                       </Grid>
+                    </Grid>
 
-                    <Typography sx={{ display: "flex", alignItems: "center", gap: 1, fontSize: 12, fontWeight: 800, color: "#4a6b62", mb: 2 }}>
-                       <ConfirmationNumberOutlinedIcon sx={{ fontSize: 16 }} /> COUPON CODES (OPTIONAL)
-                    </Typography>
-                    
-                    <Box sx={{ display: "flex", gap: 1, mb: 3 }}>
-                       <TextField size="small" placeholder="Coupon Code 1" value={couponInput} onChange={(e) => setCouponInput(e.target.value)} sx={{ flex: 1, bgcolor: "#fff", "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }} />
-                       <TextField size="small" placeholder="Coupon Code 2" disabled sx={{ flex: 1, bgcolor: "#f8fafc", "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }} />
-                       <Button variant="contained" disableElevation onClick={() => { if(couponInput.toLowerCase() === 'welcome50') { setDiscountPercent(50); } else if(couponInput) { alert('Invalid Coupon'); } }} sx={{ bgcolor: "#cbd5e1", color: "text.secondary", fontWeight: 700, borderRadius: 1.5, px: 3, "&:hover": { bgcolor: "#94a3b8", color: "#fff" } }}>Apply</Button>
+                    {discountPercent > 0 && (
+                      <Box sx={{ p: 1.5, mb: 2, border: '1px dashed #88BDA4', borderRadius: 1.5, bgcolor: '#f0fdf4', display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <ConfirmationNumberOutlinedIcon sx={{ fontSize: 18, color: '#d97706' }} />
+                        <Typography sx={{ fontSize: 12, fontWeight: 700, color: 'success.dark' }}>
+                           Coupon Applied: <span style={{ color: '#0f172a' }}>WELCOME50</span> (+50% discount applied)
+                        </Typography>
+                      </Box>
+                    )}
+
+                    <Box sx={{ p: 1.5, mb: 4, border: '1px dashed #88BDA4', borderRadius: 1.5, bgcolor: '#f8fafc', display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CreditCardIcon sx={{ fontSize: 18, color: '#d97706' }} />
+                      <Typography sx={{ fontSize: 12, fontWeight: 700, color: 'text.secondary' }}>
+                         PAYMENT INVOICES
+                      </Typography>
+                      <Typography sx={{ fontSize: 12, fontWeight: 700, color: 'text.primary', ml: 1 }}>
+                         Upfront Paid: ₹0.00 <LinkIcon sx={{ fontSize: 14, verticalAlign: 'middle', color: '#3b82f6' }}/>
+                      </Typography>
                     </Box>
 
-                    <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap", alignItems: "center" }}>
-                      <Button variant="outlined" size="small" sx={{ textTransform: "none", fontWeight: 700, borderRadius: 1.5, bgcolor: "#fff", borderColor: "#f59e0b", color: "#d97706", '&:hover': { bgcolor: '#fef3c7', borderColor: "#f59e0b" } }}>
-                         <LinkIcon sx={{ fontSize: 16, mr: 0.5 }} /> Send Payment Link (Email & WA)
+                    <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                      <Button variant="contained" color="primary" size="small" onClick={() => setIsChangingPlan(true)} sx={{ textTransform: "none", fontWeight: 700, borderRadius: 1.5 }}>
+                         <AutorenewIcon sx={{ fontSize: 18, mr: 0.5 }} /> Change Plan
                       </Button>
-                      <Button variant="outlined" color="info" size="small" sx={{ textTransform: "none", fontWeight: 700, borderRadius: 1.5, bgcolor: "#fff", borderColor: "#659287", color: "#659287", '&:hover': { bgcolor: 'rgba(101, 146, 135, 0.05)' } }}>
-                         <ContentCopyIcon sx={{ fontSize: 16, mr: 0.5 }} /> Copy Payment Link
-                      </Button>
-                      <Button variant="contained" color="success" size="small" disableElevation onClick={() => alert("Payment logic will be implemented in the next iteration.")} sx={{ textTransform: "none", fontWeight: 700, borderRadius: 1.5, bgcolor: "#5c9a6e", "&:hover": { bgcolor: "#4a6b62" } }}>
-                         <CreditCardIcon sx={{ fontSize: 16, mr: 0.5 }} /> Collect Payment Now
-                      </Button>
-                    </Box>
-
-                    <Box sx={{ mt: 4 }}>
-                      {!isChangingPlan ? (
-                        <Button variant="outlined" color="info" size="small" onClick={() => setIsChangingPlan(true)} sx={{ textTransform: "none", fontWeight: 700, borderRadius: 1.5, bgcolor: "#fff", borderColor: "#659287", color: "#659287" }}>
-                           <AutorenewIcon sx={{ fontSize: 18, mr: 0.5 }} /> Change Plan
-                        </Button>
-                      ) : (
-                        <Button variant="outlined" color="error" size="small" onClick={() => setIsChangingPlan(false)} sx={{ textTransform: "none", fontWeight: 700, borderRadius: 1.5, bgcolor: "#fff" }}>
-                           <AutorenewIcon sx={{ fontSize: 18, mr: 0.5 }} /> Cancel Change
-                        </Button>
-                      )}
                     </Box>
                   </Box>
                 );
@@ -699,7 +810,7 @@ const RegistrationPipeline: React.FC<PipelineProps> = ({
                   multiline
                   rows={3}
                   label="Decision Notes / Changes Requested"
-                  placeholder="Required for rejection or when requesting changes…"
+                  placeholder="Required for rejection or when requesting changes"
                   value={reviewNote}
                   onChange={(e) => setReviewNote(e.target.value)}
                   sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }}
@@ -721,7 +832,7 @@ const RegistrationPipeline: React.FC<PipelineProps> = ({
                     <Button
                       variant="contained"
                       disableElevation
-                      color="success"
+                      color="primary"
                       onClick={onApprove}
                       disabled={!isDemoConducted}
                       sx={{ textTransform: "none", fontWeight: 700, borderRadius: 1.5, px: 2.5, boxShadow: "none" }}

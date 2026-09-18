@@ -1,16 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface IPlanFeatures {
-  maxBookingsPerMonth: number;
-  maxServices: number;
-  maxAdmins: number;
-  googleCalendarSync: boolean;
-  googleMeetIntegration: boolean;
-  customBranding: boolean;
-  prioritySupport: boolean;
-  analyticsAccess: boolean;
-}
-
 export interface IPlanVariant {
   _id?: mongoose.Types.ObjectId;
   name: string;
@@ -19,19 +8,38 @@ export interface IPlanVariant {
   price: number;
 }
 
+export interface IGstSettings {
+  type: 'inclusive' | 'exclusive';
+  rate: number;
+}
+
+export interface IPlanLimits {
+  maxBookingsPerMonth: number;
+  maxServices: number;
+  maxAdmins: number;
+}
+
 export interface IPlan extends Document {
-  price?: number;
-  billingCycle?: string;
   name: string;
   slug: string;
-  currency: string;
-  isActive: boolean;
-  isDefault: boolean;
-  features: IPlanFeatures;
+  planType: string;
+  numberOfShops: number;
+  numberOfUsers: number;
+  oneTimeFee: number;
+  gstSettings: IGstSettings;
+  planLimits: IPlanLimits;
+  isPublic: boolean;
+  controls: string[];
   variants: IPlanVariant[];
+  currency: string;
   displayOrder: number;
   createdAt: Date;
   updatedAt: Date;
+  // Legacy fields for backward compatibility during migration
+  price?: number;
+  billingCycle?: string;
+  isActive?: boolean;
+  isDefault?: boolean;
 }
 
 const variantSchema = new Schema({
@@ -41,30 +49,38 @@ const variantSchema = new Schema({
   price: { type: Number, required: true }
 });
 
+const gstSettingsSchema = new Schema({
+  type: { type: String, enum: ['inclusive', 'exclusive'], default: 'exclusive' },
+  rate: { type: Number, default: 18 }
+}, { _id: false });
+
 const planSchema: Schema = new Schema({
   name: { type: String, required: true, unique: true },
   slug: { type: String, required: true, unique: true, lowercase: true },
-  price: { type: Number, default: 0 },
-  billingCycle: { type: String, enum: ['monthly', 'quarterly', 'half-yearly', 'yearly', 'one-time'], default: 'monthly' },
-  currency: { type: String, default: 'INR' },
-  isActive: { type: Boolean, default: true },
-  isDefault: { type: Boolean, default: false },
-  features: {
+  planType: { type: String, default: 'PRIMARY' },
+  numberOfShops: { type: Number, default: 1 },
+  numberOfUsers: { type: Number, default: 1 },
+  oneTimeFee: { type: Number, default: 0 },
+  gstSettings: { type: gstSettingsSchema, default: () => ({ type: 'exclusive', rate: 18 }) },
+  planLimits: {
     maxBookingsPerMonth: { type: Number, default: 50 },
     maxServices: { type: Number, default: 5 },
-    maxAdmins: { type: Number, default: 1 },
-    googleCalendarSync: { type: Boolean, default: false },
-    googleMeetIntegration: { type: Boolean, default: false },
-    customBranding: { type: Boolean, default: false },
-    prioritySupport: { type: Boolean, default: false },
-    analyticsAccess: { type: Boolean, default: false },
+    maxAdmins: { type: Number, default: 1 }
   },
+  isPublic: { type: Boolean, default: false },
+  controls: { type: [String], default: [] },
   variants: { type: [variantSchema], default: [] },
+  currency: { type: String, default: 'INR' },
   displayOrder: { type: Number, default: 0 },
+  
+  // Legacy fields
+  price: { type: Number, default: 0 },
+  billingCycle: { type: String, enum: ['monthly', 'quarterly', 'half-yearly', 'yearly', 'one-time'], default: 'monthly' },
+  isActive: { type: Boolean, default: true },
+  isDefault: { type: Boolean, default: false },
 }, {
   timestamps: true
 });
 
 const Plan = mongoose.model<IPlan>('Plan', planSchema);
 export default Plan;
-

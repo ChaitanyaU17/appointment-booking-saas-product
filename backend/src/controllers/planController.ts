@@ -34,7 +34,13 @@ export const getPlanById = async (req: Request, res: Response): Promise<any> => 
 
 export const createPlan = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { name, slug, price, currency, billingCycle, isActive, isDefault, features, displayOrder, variants } = req.body;
+    const { 
+      name, slug, currency, displayOrder, variants,
+      planType, numberOfShops, numberOfUsers, oneTimeFee,
+      gstSettings, planLimits, isPublic, controls,
+      // Legacy compatibility
+      price, billingCycle, isActive, isDefault 
+    } = req.body;
 
     const exists = await Plan.findOne({ $or: [{ name }, { slug }] });
     if (exists) {
@@ -46,16 +52,11 @@ export const createPlan = async (req: Request, res: Response): Promise<any> => {
     }
 
     const plan = new Plan({
-      name,
-      slug,
-      price,
-      currency,
-      billingCycle,
-      isActive,
-      isDefault,
-      features,
-      displayOrder,
-      variants: variants || []
+      name, slug, currency, displayOrder, variants: variants || [],
+      planType, numberOfShops, numberOfUsers, oneTimeFee,
+      gstSettings, planLimits, isPublic, controls: controls || [],
+      // Legacy compatibility
+      price, billingCycle, isActive, isDefault
     });
 
     const createdPlan = await plan.save();
@@ -67,7 +68,14 @@ export const createPlan = async (req: Request, res: Response): Promise<any> => {
 
 export const updatePlan = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { name, slug, price, currency, billingCycle, isActive, isDefault, features, displayOrder, variants } = req.body;
+    const { 
+      name, slug, currency, displayOrder, variants,
+      planType, numberOfShops, numberOfUsers, oneTimeFee,
+      gstSettings, planLimits, isPublic, controls,
+      // Legacy compatibility
+      price, billingCycle, isActive, isDefault 
+    } = req.body;
+    
     const plan = await Plan.findById(req.params.id);
 
     if (!plan) {
@@ -80,14 +88,24 @@ export const updatePlan = async (req: Request, res: Response): Promise<any> => {
 
     plan.name = name ?? plan.name;
     plan.slug = slug ?? plan.slug;
-    plan.price = price ?? plan.price;
     plan.currency = currency ?? plan.currency;
-    plan.billingCycle = billingCycle ?? plan.billingCycle;
-    plan.isActive = isActive ?? plan.isActive;
-    plan.isDefault = isDefault ?? plan.isDefault;
-    plan.features = features ?? plan.features;
     plan.displayOrder = displayOrder ?? plan.displayOrder;
     if (variants !== undefined) plan.variants = variants;
+    
+    plan.planType = planType ?? plan.planType;
+    plan.numberOfShops = numberOfShops ?? plan.numberOfShops;
+    plan.numberOfUsers = numberOfUsers ?? plan.numberOfUsers;
+    plan.oneTimeFee = oneTimeFee ?? plan.oneTimeFee;
+    if (gstSettings !== undefined) plan.gstSettings = gstSettings;
+    if (planLimits !== undefined) plan.planLimits = planLimits;
+    plan.isPublic = isPublic ?? plan.isPublic;
+    if (controls !== undefined) plan.controls = controls;
+
+    // Legacy
+    if (price !== undefined) plan.price = price;
+    if (billingCycle !== undefined) plan.billingCycle = billingCycle;
+    if (isActive !== undefined) plan.isActive = isActive;
+    if (isDefault !== undefined) plan.isDefault = isDefault;
 
     const updatedPlan = await plan.save();
     const businessCount = await Business.countDocuments({ planId: updatedPlan._id });
@@ -125,7 +143,7 @@ export const togglePlanStatus = async (req: Request, res: Response): Promise<any
       return res.status(404).json({ message: 'Plan not found' });
     }
 
-    plan.isActive = !plan.isActive;
+    plan.isPublic = !plan.isPublic; // Using isPublic for toggle now
     const updatedPlan = await plan.save();
     const businessCount = await Business.countDocuments({ planId: updatedPlan._id });
     res.json({ ...updatedPlan.toObject(), businessCount });

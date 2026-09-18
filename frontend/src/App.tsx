@@ -25,6 +25,7 @@ const Registration = lazy(() => import('./pages/superadmin/Registration'));
 const OnboardedShops = lazy(() => import('./pages/superadmin/OnboardedShops'));
 const Admins = lazy(() => import('./pages/superadmin/Admins'));
 const Plans = lazy(() => import('./pages/superadmin/Plans'));
+const PlanForm = lazy(() => import('./pages/superadmin/PlanForm'));
 const DemoRequests = lazy(() => import('./pages/superadmin/DemoRequests'));
 const BusinessDashboard = lazy(() => import('./pages/business/Dashboard'));
 const Appointments = lazy(() => import('./pages/business/Appointments'));
@@ -76,6 +77,8 @@ function App() {
               <Route path="shops" element={<OnboardedShops />} />
               <Route path="admins" element={<Admins />} />
               <Route path="plans" element={<Plans />} />
+              <Route path="plan-create" element={<PlanForm />} />
+              <Route path="plan-edit/:id" element={<PlanForm />} />
               <Route path="demo-requests" element={<DemoRequests />} />
             </Route>
             

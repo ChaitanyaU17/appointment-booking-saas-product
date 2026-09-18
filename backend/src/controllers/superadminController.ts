@@ -108,8 +108,23 @@ export const getBusinesses = async (req: Request, res: Response): Promise<any> =
   try {
     const businesses = await Business.find({})
       .populate('planId', 'name slug price')
-      .populate('requestedPlanId', 'name');
-    res.json(businesses);
+      .populate('requestedPlanId', 'name')
+      .lean();
+    
+    // Fetch all business admins to map owner names
+    const admins = await User.find({ role: UserRole.BUSINESS_ADMIN }, 'name email phone businessId originalBusinessId').lean();
+    
+    const businessesWithOwner = businesses.map(b => {
+      const admin = admins.find(a => a.businessId?.toString() === b._id.toString() || a.originalBusinessId?.toString() === b._id.toString());
+      return {
+        ...b,
+        ownerName: admin?.name || null,
+        ownerEmail: admin?.email || null,
+        ownerPhone: admin?.phone || null,
+      };
+    });
+
+    res.json(businessesWithOwner);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
