@@ -24,10 +24,12 @@ import businessRoutes from './routes/businessRoutes';
 import publicRoutes from './routes/publicRoutes';
 import customerRoutes from './routes/customerRoutes';
 import planRoutes from './routes/planRoutes';
+import couponRoutes from './routes/couponRoutes';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/superadmin', superadminRoutes);
 app.use('/api/superadmin/plans', planRoutes);
+app.use('/api/superadmin/coupons', couponRoutes);
 app.use('/api/business', businessRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/customer', customerRoutes);

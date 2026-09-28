@@ -9,11 +9,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
+      const publicExactRoutes = ['/login', '/register', '/superadmin/login', '/', '/contact-sales', '/help-center', '/security', '/integrations'];
       const isPublicRoute = 
-        window.location.pathname === '/login' || 
-        window.location.pathname === '/superadmin/login' || 
-        window.location.pathname === '/' || 
-        window.location.pathname.startsWith('/b/');
+        publicExactRoutes.includes(window.location.pathname) || 
+        window.location.pathname.startsWith('/b/') ||
+        window.location.pathname.startsWith('/pay/');
         
       if (!isPublicRoute) {
         window.location.href = '/login';
