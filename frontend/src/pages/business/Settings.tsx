@@ -25,10 +25,10 @@ const defaultHours: DayHours[] = dayNames.map((_, i) => ({
 
 export default function Settings() {
   const dispatch = useAppDispatch();
-  const { settingsData: data, settingsLoading, services, servicesLoading } = useAppSelector((state) => state.business);
+  const { settingsData: data, settingsLoading, services } = useAppSelector((state) => state.business);
   const { plans, plansLoading } = useAppSelector((state) => state.public);
   const { user } = useAppSelector((state) => state.auth);
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false); void _loading;
 
   const [bookingUrl, setBookingUrl] = useState('');
   const [qrCode, setQrCode] = useState('');
@@ -47,9 +47,9 @@ export default function Settings() {
     }
   }, [upgradeModalOpen, plans.length, dispatch]);
 
-  const handleUpgradePlan = async (planId: string) => {
+  const handleUpgradePlan = async (planId: string, variantId?: string) => {
     try {
-      await dispatch(updateBusinessPlan(planId)).unwrap();
+      await dispatch(updateBusinessPlan({ planId, variantId })).unwrap();
       dispatch(showNotification({ message: 'Plan updated successfully!' }));
       dispatch(fetchBusinessSettings());
       setUpgradeModalOpen(false);
@@ -141,6 +141,10 @@ export default function Settings() {
   };
 
   const openServiceModal = (service: any = null) => {
+    if (data?.business?.isExpired) {
+      dispatch(showNotification({ message: 'Your subscription has expired. Please renew to modify services.', failure: true }));
+      return;
+    }
     if (service) {
       setEditingServiceId(service._id);
       serviceFormik.setValues({ name: service.name, duration: service.duration, price: service.price, description: service.description || '' });
@@ -218,66 +222,104 @@ export default function Settings() {
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, flexGrow: 1 }}>
               <Box sx={{ flex: 1, minWidth: 200 }}>
                 <Typography variant="caption" color="text.secondary">Current Plan</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 0.5, mb: 1 }}>
-                  <Typography variant="h4" sx={{ fontWeight: 800 }}>
-                    {data?.business?.planId?.name || 'Free'}
-                  </Typography>
-                  <Chip 
-                    label={data?.business?.trialStatus === 'Active' ? 'Trial Active' : 'Active'} 
-                    color={data?.business?.trialStatus === 'Active' ? 'secondary' : 'success'} 
-                    size="small" 
-                  />
-                </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  {data?.business?.trialStatus === 'Active' 
-                    ? `Premium Trial` 
-                    : (!data?.business?.planId || data.business.planId.price === 0 ? 'Free forever' : `\u20B9${data.business.planId.price} / month`)}
-                </Typography>
-                
-                {data?.business?.isDemoAccount ? (
-                  <Typography variant="body2" color="info.main" sx={{ fontStyle: 'italic' }}>
-                    Demo Sandbox (Plan modifications disabled)
-                  </Typography>
-                ) : data?.business?.trialStatus === 'Active' ? (
-                  <Typography variant="body2" color="secondary" sx={{ fontStyle: 'italic' }}>
-                    Your trial ends in {Math.max(0, Math.ceil((new Date(data.business.trialEndsAt).getTime() - new Date().getTime()) / 86400000))} days. Please contact support to upgrade.
-                  </Typography>
-                ) : (
-                  <Button variant="contained" color="primary" onClick={() => setUpgradeModalOpen(true)}>
-                    Upgrade Plan
-                  </Button>
+                {data?.business?.isExpired && (
+                  <Alert severity="error" sx={{ mt: 1, mb: 2, borderRadius: 2 }}>
+                    Your subscription has expired. Please request a plan upgrade.
+                  </Alert>
                 )}
+                {(() => {
+                  const activePlan = plans?.find((p: any) => p._id === data?.business?.planId?._id || p._id === data?.business?.planId || p._id === data?.business?.paymentBreakdown?.planId);
+                  
+                  return (
+                    <>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 0.5, mb: 1 }}>
+                        <Typography variant="h4" sx={{ fontWeight: 800 }}>
+                          {activePlan?.name || data?.business?.planId?.name || 'Free'}
+                        </Typography>
+                        <Chip 
+                          label={data?.business?.isExpired ? 'Expired' : data?.business?.trialStatus === 'Active' ? 'Trial Active' : 'Active'} 
+                          color={data?.business?.isExpired ? 'error' : data?.business?.trialStatus === 'Active' ? 'secondary' : 'success'} 
+                          size="small" 
+                        />
+                      </Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        {(() => {
+                          if (data?.business?.isExpired) return 'Subscription Expired';
+                          if (data?.business?.trialStatus === 'Active') return 'Premium Trial';
+                          
+                          const endStr = data?.business?.subscriptionEnd || data?.business?.planEndDate || data?.business?.paymentBreakdown?.endDate;
+                          if (endStr) {
+                            const end = new Date(endStr);
+                            const daysLeft = Math.ceil((end.getTime() - Date.now()) / (1000 * 3600 * 24));
+                            if (daysLeft < 0) return `Expired on ${end.toLocaleDateString()}`;
+                            if (daysLeft === 0) return `Expires today`;
+                            return `Expires on ${end.toLocaleDateString()} (${daysLeft} days left)`;
+                          }
+        
+                          if (!activePlan || activePlan.price === 0) return 'Free forever';
+                          return `₹${activePlan.price} / base`;
+                        })()}
+                      </Typography>
+                      
+                      {data?.business?.isDemoAccount ? (
+                        <Typography variant="body2" color="info.main" sx={{ fontStyle: 'italic' }}>
+                          Demo Sandbox (Plan modifications disabled)
+                        </Typography>
+                      ) : data?.business?.trialStatus === 'Active' ? (
+                        <Typography variant="body2" color="secondary" sx={{ fontStyle: 'italic' }}>
+                          Your trial ends in {Math.max(0, Math.ceil((new Date(data.business.trialEndsAt).getTime() - new Date().getTime()) / 86400000))} days. Please contact support to upgrade.
+                        </Typography>
+                      ) : data?.business?.requestedPlanId ? (
+                        <Button variant="outlined" color="warning" disabled sx={{ fontStyle: 'italic' }}>
+                          Upgrade Requested
+                        </Button>
+                      ) : (
+                        <Button variant="contained" color="primary" onClick={() => setUpgradeModalOpen(true)}>
+                          Upgrade Plan
+                        </Button>
+                      )}
+                    </>
+                  );
+                })()}
               </Box>
 
               <Box sx={{ flex: 1, minWidth: 200 }}>
                 <Typography variant="caption" color="text.secondary">Usage & Limits</Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-                  <Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>Services</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {services.length} / {data?.business?.planId?.features?.maxServices >= 9999 ? '∞' : (data?.business?.planId?.features?.maxServices || 1)}
-                      </Typography>
+                {(() => {
+                  const activePlan = plans?.find((p: any) => p._id === data?.business?.planId?._id || p._id === data?.business?.planId || p._id === data?.business?.paymentBreakdown?.planId) || data?.business?.planId;
+                  const maxServices = activePlan?.planLimits?.maxServices || 1;
+                  const maxAdmins = activePlan?.planLimits?.maxAdmins || 1;
+                  
+                  return (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                      <Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>Services</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {services.length} / {maxServices >= 9999 ? '∞' : maxServices}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ height: 6, bgcolor: '#e2e8f0', borderRadius: 3 }}>
+                          <Box sx={{ 
+                            height: '100%', bgcolor: 'primary.main', borderRadius: 3, 
+                            width: `${Math.min(100, (services.length / maxServices) * 100)}%` 
+                          }} />
+                        </Box>
+                      </Box>
+                      <Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>Admins</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            1 / {maxAdmins >= 9999 ? '∞' : maxAdmins}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ height: 6, bgcolor: '#e2e8f0', borderRadius: 3 }}>
+                          <Box sx={{ height: '100%', bgcolor: 'primary.main', borderRadius: 3, width: `${Math.min(100, (1 / maxAdmins) * 100)}%` }} />
+                        </Box>
+                      </Box>
                     </Box>
-                    <Box sx={{ height: 6, bgcolor: '#e2e8f0', borderRadius: 3 }}>
-                      <Box sx={{ 
-                        height: '100%', bgcolor: 'primary.main', borderRadius: 3, 
-                        width: `${Math.min(100, (services.length / (data?.business?.planId?.features?.maxServices || 1)) * 100)}%` 
-                      }} />
-                    </Box>
-                  </Box>
-                  <Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>Admins</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        1 / {data?.business?.planId?.features?.maxAdmins >= 9999 ? '∞' : (data?.business?.planId?.features?.maxAdmins || 1)}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ height: 6, bgcolor: '#e2e8f0', borderRadius: 3 }}>
-                      <Box sx={{ height: '100%', bgcolor: 'primary.main', borderRadius: 3, width: `${Math.min(100, (1 / (data?.business?.planId?.features?.maxAdmins || 1)) * 100)}%` }} />
-                    </Box>
-                  </Box>
-                </Box>
+                  );
+                })()}
               </Box>
             </Box>
           </Card>
@@ -501,8 +543,8 @@ export default function Settings() {
                     height: '100%', 
                     display: 'flex', 
                     flexDirection: 'column',
-                    border: data?.business?.planId?._id === plan._id ? '2px solid' : '1px solid',
-                    borderColor: data?.business?.planId?._id === plan._id ? 'primary.main' : 'divider',
+                    border: (data?.business?.planId?._id === plan._id || data?.business?.planId === plan._id || data?.business?.paymentBreakdown?.planId === plan._id) ? '2px solid' : '1px solid',
+                    borderColor: (data?.business?.planId?._id === plan._id || data?.business?.planId === plan._id || data?.business?.paymentBreakdown?.planId === plan._id) ? 'primary.main' : 'divider',
                   }}>
                     <Typography variant="h6" sx={{ fontWeight: 700 }}>{plan.name}</Typography>
                     <Typography variant="h4" sx={{ fontWeight: 800, my: 2 }}>
@@ -510,20 +552,42 @@ export default function Settings() {
                       <Typography variant="caption" color="text.secondary">/month</Typography>
                     </Typography>
                     <Box sx={{ flexGrow: 1 }}>
-                      <Typography variant="body2" sx={{ mb: 1 }}>• Up to {plan.features.maxServices >= 9999 ? 'Unlimited' : plan.features.maxServices} Services</Typography>
-                      <Typography variant="body2" sx={{ mb: 1 }}>• Up to {plan.features.maxAdmins >= 9999 ? 'Unlimited' : plan.features.maxAdmins} Admins</Typography>
-                      {plan.features.googleMeetIntegration && <Typography variant="body2" sx={{ mb: 1 }}>• Google Meet Integration</Typography>}
+                      <Typography variant="body2" sx={{ mb: 1 }}>• Up to {plan.planLimits?.maxServices >= 9999 ? 'Unlimited' : plan.planLimits?.maxServices} Services</Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>• Up to {plan.planLimits?.maxAdmins >= 9999 ? 'Unlimited' : plan.planLimits?.maxAdmins} Admins</Typography>
+                      {plan.controls?.includes("Google Meet") && <Typography variant="body2" sx={{ mb: 1 }}>• Google Meet Integration</Typography>}
                     </Box>
-                    <Button 
-                      variant={data?.business?.planId?._id === plan._id ? 'outlined' : 'contained'} 
-                      color="primary" 
-                      fullWidth 
-                      sx={{ mt: 3 }}
-                      disabled={data?.business?.planId?._id === plan._id}
-                      onClick={() => handleUpgradePlan(plan._id)}
-                    >
-                      {data?.business?.planId?._id === plan._id ? 'Current Plan' : 'Select Plan'}
-                    </Button>
+                    {plan.variants && plan.variants.length > 0 ? (
+                      <Box sx={{ mt: 3, display: "flex", flexDirection: "column", gap: 1 }}>
+                        {plan.variants.map((v: any) => {
+                           const isCurrentVariant = (data?.business?.planId?._id === plan._id || data?.business?.planId === plan._id || data?.business?.paymentBreakdown?.planId === plan._id) && (data?.business?.planVariantId === v._id || data?.business?.paymentBreakdown?.planVariantId === v._id);
+                           const isRequested = data?.business?.requestedPlanId === plan._id && (data?.business as any)?.requestedPlanVariantId === v._id;
+                           return (
+                             <Button
+                               key={v._id}
+                               variant={isCurrentVariant ? 'outlined' : 'contained'}
+                               color={isRequested ? 'warning' : 'primary'}
+                               fullWidth
+                               size="small"
+                               disabled={isCurrentVariant || isRequested}
+                               onClick={() => handleUpgradePlan(plan._id, v._id)}
+                             >
+                               {isCurrentVariant ? 'Current' : isRequested ? 'Requested' : `Select ${v.name}`}
+                             </Button>
+                           );
+                        })}
+                      </Box>
+                    ) : (
+                      <Button 
+                        variant={(data?.business?.planId?._id === plan._id || data?.business?.planId === plan._id || data?.business?.paymentBreakdown?.planId === plan._id) ? 'outlined' : 'contained'} 
+                        color={data?.business?.requestedPlanId === plan._id ? "warning" : "primary"}
+                        fullWidth 
+                        sx={{ mt: 3 }}
+                        disabled={(data?.business?.planId?._id === plan._id || data?.business?.planId === plan._id || data?.business?.paymentBreakdown?.planId === plan._id) || data?.business?.requestedPlanId === plan._id}
+                        onClick={() => handleUpgradePlan(plan._id)}
+                      >
+                        {(data?.business?.planId?._id === plan._id || data?.business?.planId === plan._id || data?.business?.paymentBreakdown?.planId === plan._id) ? 'Current Plan' : (data?.business?.requestedPlanId === plan._id ? 'Requested' : 'Select Plan')}
+                      </Button>
+                    )}
                   </Card>
                 </Grid>
               ))}

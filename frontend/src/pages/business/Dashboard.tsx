@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Skeleton, Box, Card, Typography, Grid, Alert, IconButton, Divider, Chip, List, ListItem, ListItemText, ListItemAvatar, Button } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -83,6 +84,7 @@ const KpiCard = ({ title, value, icon, trend = 15.2, trendUp = true, color = '#6
 
 export default function BusinessDashboard() {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const { dashboardData: stats, dashboardLoading: loading } = useAppSelector((state) => state.business);
   const [isGoogleConnected, setIsGoogleConnected] = useState(true);
 
@@ -115,6 +117,20 @@ export default function BusinessDashboard() {
 
   return (
     <Box>
+      {stats?.isExpired && (
+        <Alert 
+          severity="error" 
+          sx={{ mb: 3, borderRadius: 2, alignItems: 'center' }}
+          action={
+            <Button color="inherit" size="small" onClick={() => navigate('/business/settings')}>
+              Renew Plan
+            </Button>
+          }
+        >
+          <Typography variant="body1" sx={{ fontWeight: 600 }}>Your subscription has expired.</Typography>
+          <Typography variant="body2">New bookings, walk-ins, and service management are disabled. Please upgrade your plan to restore full access.</Typography>
+        </Alert>
+      )}
       {stats?.isDemoAccount && (
         <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
           <Typography variant="body1" sx={{ fontWeight: 600 }}>Welcome to your Demo Sandbox!</Typography>

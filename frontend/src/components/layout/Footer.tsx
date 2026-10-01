@@ -31,7 +31,7 @@ export default function Footer() {
             </Box>
           </Grid>
           
-          <Grid size={{ xs: 6, md: 2, mdOffset: 1 }}>
+          <Grid size={{ xs: 6, md: 2 }} offset={{ md: 1 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>Product</Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               <Link href="/#features" color="inherit" underline="hover" sx={{ opacity: 0.7 }}>Features</Link>

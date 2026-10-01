@@ -1,7 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Skeleton, Box, Typography, Tabs, Tab, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Paper, Chip, Link,
-  Dialog, DialogTitle, DialogContent, TextField, Button, Grid, IconButton, ToggleButton, ToggleButtonGroup, Divider } from '@mui/material';
+import { Skeleton, Box, Typography, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Link, Dialog, DialogTitle, DialogContent, TextField, Button, Grid, IconButton, ToggleButton, ToggleButtonGroup, Divider, Alert } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';
 import type { View } from 'react-big-calendar';
@@ -31,6 +29,7 @@ const tabs = [
 export default function Appointments() {
   const dispatch = useAppDispatch();
   const { data: appointments, loading } = useAppSelector((state) => state.appointments);
+  const { settingsData: data } = useAppSelector((state) => state.business);
 
   const [tab, setTab] = useState(0);
   const [statusFilter, setStatusFilter] = useState('All');
@@ -66,6 +65,10 @@ export default function Appointments() {
   }, [appointments]);
 
   const handleSelectSlot = (slotInfo: { start: Date; end: Date }) => {
+    if (data?.business?.isExpired) {
+      dispatch(showNotification({ message: 'Your subscription has expired. Please renew to add walk-ins.', failure: true }));
+      return;
+    }
     setSelectedSlot(slotInfo);
     setWalkInOpen(true);
   };
@@ -150,6 +153,12 @@ export default function Appointments() {
 
   return (
     <Box>
+      {data?.business?.isExpired && (
+        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+          <Typography variant="body1" sx={{ fontWeight: 600 }}>Your subscription has expired.</Typography>
+          <Typography variant="body2">New bookings and walk-ins are disabled. You can still manage existing appointments.</Typography>
+        </Alert>
+      )}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
         <Box>
           <Typography variant="h4" sx={{fontWeight: 700}} color="primary" gutterBottom>

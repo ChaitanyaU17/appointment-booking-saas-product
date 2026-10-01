@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Box, Typography, Button, Divider, Grid } from '@mui/material';
 import BookDemoModal from '../components/auth/BookDemoModal';
 import GoogleIcon from '../components/common/GoogleIcon';
@@ -101,7 +101,7 @@ export default function Login() {
               onClick={() => setDemoModalOpen(true)}
               sx={{ mb: 2, py: 1.5, fontWeight: 700 }}
             >
-              Book a Demo
+              Book 1:1 Demo Call
             </Button>
             
             <Typography variant="body2" color="textSecondary">

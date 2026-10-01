@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AppBar, Toolbar, Typography, Button, IconButton, Box, Popover, Fade, Grid, Divider } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, IconButton, Box, Popover, Grid } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
@@ -101,11 +101,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
             <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }}>
               <Button sx={navButtonSx} endIcon={<KeyboardArrowDownIcon sx={{ transition: '0.2s', transform: anchorElProduct ? 'rotate(180deg)' : 'none' }} />} onClick={(e) => setAnchorElProduct(e.currentTarget)}>Product</Button>
               <Popover 
-                anchorEl={anchorElProduct} open={Boolean(anchorElProduct)} onClose={() => setAnchorElProduct(null)} 
-                TransitionComponent={Fade} elevation={4}
+                anchorEl={anchorElProduct} open={Boolean(anchorElProduct)} onClose={() => setAnchorElProduct(null)} elevation={4}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                PaperProps={{ sx: { mt: 2, borderRadius: 3, p: 2, width: 360 } }}
+                slotProps={{ paper: { sx: {} } }}
               >
                 <NavItem icon={<AutoAwesomeIcon />} title="Features" desc="Everything you need to automate your bookings and manage your day." onClick={() => handleScroll('features', setAnchorElProduct)} />
                 <NavItem icon={<ExtensionIcon />} title="Integrations" desc="Connect Slotify with Google Calendar, Zoom, and Stripe seamlessly." onClick={() => handleNavigate('/integrations', setAnchorElProduct)} />
@@ -114,20 +113,19 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
               <Button sx={navButtonSx} endIcon={<KeyboardArrowDownIcon sx={{ transition: '0.2s', transform: anchorElSolutions ? 'rotate(180deg)' : 'none' }} />} onClick={(e) => setAnchorElSolutions(e.currentTarget)}>Solutions</Button>
               <Popover 
-                anchorEl={anchorElSolutions} open={Boolean(anchorElSolutions)} onClose={() => setAnchorElSolutions(null)} 
-                TransitionComponent={Fade} elevation={4}
+                anchorEl={anchorElSolutions} open={Boolean(anchorElSolutions)} onClose={() => setAnchorElSolutions(null)} elevation={4}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                PaperProps={{ sx: { mt: 2, borderRadius: 3, width: 650, overflow: 'hidden' } }}
+                slotProps={{ paper: { sx: {} } }}
               >
                 <Grid container>
-                  <Grid item xs={7} sx={{ p: 3 }}>
+                  <Grid size={{ xs: 7 }} sx={{ p: 3 }}>
                     <Typography variant="overline" sx={{ fontWeight: 800, color: 'text.secondary', ml: 2, mb: 1, display: 'block' }}>By Industry</Typography>
                     <NavItem icon={<ContentCutIcon />} title="For Salons & Spas" desc="Manage chairs, staff, and walk-ins easily." onClick={() => handleScroll('solutions', setAnchorElSolutions)} />
                     <NavItem icon={<MedicalServicesOutlinedIcon />} title="For Clinics & Doctors" desc="Secure patient scheduling and history tracking." onClick={() => handleScroll('solutions', setAnchorElSolutions)} />
                     <NavItem icon={<SchoolOutlinedIcon />} title="For Tutors & Coaches" desc="Handle group classes and 1-on-1 sessions." onClick={() => handleScroll('solutions', setAnchorElSolutions)} />
                   </Grid>
-                  <Grid item xs={5} sx={{ bgcolor: '#f8fafc', p: 4, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <Grid size={{ xs: 5 }} sx={{ bgcolor: '#f8fafc', p: 4, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <Box sx={{ width: '100%', height: 140, borderRadius: 2, mb: 3, backgroundImage: 'url(https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=500&q=80&auto=format&fit=crop)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
                     <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1 }}>Built for your growth</Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>See how local businesses are scaling their revenue with Slotify.</Typography>
@@ -138,11 +136,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
               <Button sx={navButtonSx} endIcon={<KeyboardArrowDownIcon sx={{ transition: '0.2s', transform: anchorElResources ? 'rotate(180deg)' : 'none' }} />} onClick={(e) => setAnchorElResources(e.currentTarget)}>Resources</Button>
               <Popover 
-                anchorEl={anchorElResources} open={Boolean(anchorElResources)} onClose={() => setAnchorElResources(null)} 
-                TransitionComponent={Fade} elevation={4}
+                anchorEl={anchorElResources} open={Boolean(anchorElResources)} onClose={() => setAnchorElResources(null)} elevation={4}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                PaperProps={{ sx: { mt: 2, borderRadius: 3, p: 2, width: 360 } }}
+                slotProps={{ paper: { sx: {} } }}
               >
                 <NavItem icon={<HelpOutlineOutlinedIcon />} title="Help Center" desc="Get answers quickly with our detailed documentation." onClick={() => handleNavigate('/help-center', setAnchorElResources)} />
                 <NavItem icon={<MenuBookOutlinedIcon />} title="Guides & Tutorials" desc="Step-by-step videos on how to maximize your bookings." onClick={() => handleScroll('resources', setAnchorElResources)} />
