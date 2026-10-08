@@ -55,7 +55,7 @@ const BookDemoModal: React.FC<BookDemoModalProps> = ({ open, onClose }) => {
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <VerifiedUserIcon color="success" />
-          <Typography variant="h6" sx={{fontWeight: 'bold'}}>Book a Demo</Typography>
+          <Typography variant="h6" sx={{fontWeight: 'bold'}}>Book 1:1 Demo Call</Typography>
         </Box>
         <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
       </DialogTitle>

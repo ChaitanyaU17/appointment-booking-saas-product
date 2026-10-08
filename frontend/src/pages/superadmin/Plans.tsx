@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Skeleton, Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   IconButton, Chip, Card, CardContent, Divider, Tooltip, Grid
@@ -71,7 +71,13 @@ export default function Plans() {
         </Grid>
       ) : (
         <Grid container spacing={3} sx={{ mb: 4, alignItems: 'stretch' }}>
-          {filtered.map((plan: any) => {
+          
+      {!plansLoading && filtered.length === 0 && (
+        <Box sx={{ p: 4, textAlign: 'center', bgcolor: '#f8fafc', borderRadius: 2, border: '1px dashed #cbd5e1' }}>
+          <Typography sx={{ color: '#64748b', fontWeight: 600 }}>No plans found. Click "Create New Plan" to get started.</Typography>
+        </Box>
+      )}
+      {filtered.map((plan: any) => {
             const hasVariants = plan.variants && plan.variants.length > 0;
             const minPrice = hasVariants ? Math.min(...plan.variants.map((v: any) => v.price)) : (plan.price || 0);
 
@@ -80,15 +86,23 @@ export default function Plans() {
                 <Card onClick={() => navigate(`/superadmin/plan-edit/${plan._id}`)} sx={{ cursor: 'pointer', 
                   flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', 
                 }}>
-                  {plan.planType === 'PRIMARY' && (
-                    <Chip 
-                      icon={<StarIcon sx={{ fontSize: 14 }} />} 
-                      label="Primary" 
-                      color="primary" 
-                      size="small" 
-                      sx={{ position: 'absolute', top: 12, right: 12 }} 
-                    />
-                  )}
+                  <Box sx={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: 1, alignItems: 'center', zIndex: 2 }}>
+                    {plan.planType === 'PRIMARY' && (
+                      <Chip 
+                        icon={<StarIcon sx={{ fontSize: 14 }} />} 
+                        label="Primary" 
+                        color="primary" 
+                        size="small" 
+                      />
+                    )}
+                    <Tooltip title={plan.businessCount > 0 ? 'Reassign businesses before deleting' : 'Delete plan'}>
+                      <span>
+                        <IconButton size="small" color="error" disabled={plan.businessCount > 0} onClick={(e) => { e.stopPropagation(); setItemToDelete(plan); setDeleteDialogOpen(true); }} sx={{ bgcolor: 'rgba(255,255,255,0.8)', '&:hover': { bgcolor: '#fee2e2' } }}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </Box>
                   <CardContent sx={{ p: 3, flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, pr: 4 }}>{plan.name}</Typography>
                     <Typography variant="h4" sx={{ fontWeight: 800, mb: 0.5 }}>
@@ -135,15 +149,7 @@ export default function Plans() {
                       )}
                     </Box>
 
-                    <Box sx={{ display: 'flex', gap: 1, mt: 3, justifyContent: 'flex-end', borderTop: '1px dashed #e2e8f0', pt: 2 }}>
-                      <Tooltip title={plan.businessCount > 0 ? 'Reassign businesses before deleting' : 'Delete plan'}>
-                        <span>
-                          <IconButton size="small" color="error" disabled={plan.businessCount > 0} onClick={(e) => { e.stopPropagation(); setItemToDelete(plan); setDeleteDialogOpen(true); }}>
-                            <DeleteIcon />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                    </Box>
+                    
                   </CardContent>
                 </Card>
               </Grid>
