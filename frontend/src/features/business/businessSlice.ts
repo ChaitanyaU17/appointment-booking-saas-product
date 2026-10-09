@@ -80,9 +80,9 @@ export const resubmitVerification = createAsyncThunk(
 
 export const updateBusinessPlan = createAsyncThunk(
   'business/updatePlan',
-  async (planId: string, { rejectWithValue }) => {
+  async ({ planId, variantId }: { planId: string; variantId?: string }, { rejectWithValue }) => {
     try {
-      const response = await updateBusinessPlanApi(planId);
+      const response = await updateBusinessPlanApi({ planId, variantId });
       return response;
     } catch (error: any) {
       return rejectWithValue(error?.response?.data?.message || error?.message);

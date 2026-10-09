@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { 
-  fetchPublicBusinessApi, fetchPublicSlotsApi, fetchMyAppointmentsApi, bookAppointmentApi, publicGoogleLoginApi, fetchPublicPlansApi, createDemoRequestApi
+  fetchPublicBusinessApi, fetchPublicSlotsApi, fetchMyAppointmentsApi, bookAppointmentApi, publicGoogleLoginApi, fetchPublicPlansApi, createDemoRequestApi, fetchPaymentDetailsApi, processPaymentApi
 } from "./publicApi";
 
 interface IPublicState {
@@ -19,6 +19,15 @@ interface IPublicState {
 
   plans: any[];
   plansLoading: boolean;
+
+  paymentDetails: any;
+  receiptData: any;
+  paymentDetailsLoading: boolean;
+  paymentDetailsError: any;
+
+  paymentProcessing: boolean;
+  paymentSuccess: boolean;
+  paymentError: any;
 }
 
 const initialState: IPublicState = {
@@ -37,6 +46,15 @@ const initialState: IPublicState = {
 
   plans: [],
   plansLoading: false,
+
+  paymentDetails: null,
+  receiptData: null,
+  paymentDetailsLoading: false,
+  paymentDetailsError: null,
+
+  paymentProcessing: false,
+  paymentSuccess: false,
+  paymentError: null,
 };
 
 export const fetchPublicBusiness = createAsyncThunk(
@@ -126,6 +144,30 @@ export const createDemoRequest = createAsyncThunk(
   }
 );
 
+export const fetchPaymentDetails = createAsyncThunk(
+  'public/fetchPaymentDetails',
+  async (token: string, { rejectWithValue }) => {
+    try {
+      const response = await fetchPaymentDetailsApi(token);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const processPayment = createAsyncThunk(
+  'public/processPayment',
+  async (token: string, { rejectWithValue }) => {
+    try {
+      const response = await processPaymentApi(token);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
 const publicSlice = createSlice({
   name: "public",
   initialState,
@@ -137,6 +179,12 @@ const publicSlice = createSlice({
       state.slotsError = null;
       state.myAppointmentsLoading = false;
       state.myAppointmentsError = null;
+      state.paymentDetails = null;
+      state.paymentDetailsLoading = false;
+      state.paymentDetailsError = null;
+      state.paymentProcessing = false;
+      state.paymentSuccess = false;
+      state.paymentError = null;
     }
   },
   extraReducers: (builder) => {
@@ -185,9 +233,44 @@ const publicSlice = createSlice({
         state.myAppointmentsLoading = false;
         state.myAppointmentsError = action.payload;
       })
+      
       .addCase(fetchPublicPlans.pending, (state) => { state.plansLoading = true; })
       .addCase(fetchPublicPlans.fulfilled, (state, action) => { state.plansLoading = false; state.plans = action.payload; })
-      .addCase(fetchPublicPlans.rejected, (state) => { state.plansLoading = false; });
+      .addCase(fetchPublicPlans.rejected, (state) => { state.plansLoading = false; })
+      
+      .addCase(fetchPaymentDetails.pending, (state) => {
+        state.paymentDetailsLoading = true;
+        state.paymentDetailsError = null;
+      })
+      .addCase(fetchPaymentDetails.fulfilled, (state, action) => {
+        state.paymentDetailsLoading = false;
+        state.paymentDetails = action.payload.business;
+        if (action.payload.isReceipt) {
+          state.paymentSuccess = true;
+          state.receiptData = action.payload.payment;
+        } else {
+          state.paymentSuccess = false;
+          state.receiptData = null;
+        }
+      })
+      .addCase(fetchPaymentDetails.rejected, (state, action) => {
+        state.paymentDetailsLoading = false;
+        state.paymentDetailsError = action.payload;
+      })
+
+      .addCase(processPayment.pending, (state) => {
+        state.paymentProcessing = true;
+        state.paymentError = null;
+        state.paymentSuccess = false;
+      })
+      .addCase(processPayment.fulfilled, (state) => {
+        state.paymentProcessing = false;
+        state.paymentSuccess = true;
+      })
+      .addCase(processPayment.rejected, (state, action) => {
+        state.paymentProcessing = false;
+        state.paymentError = action.payload;
+      });
   }
 });
 

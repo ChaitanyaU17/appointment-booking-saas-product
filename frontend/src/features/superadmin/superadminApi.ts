@@ -94,3 +94,13 @@ export const deleteDemoRequestApi = async (id: string): Promise<any> => {
   const response = await api.delete(`/superadmin/demo-requests/${id}`);
   return response.data;
 };
+
+export const generatePaymentLinkApi = async (id: string, paymentBreakdown: any): Promise<any> => {
+  const response = await api.post(`/superadmin/businesses/${id}/generate-payment-link`, { paymentBreakdown });
+  return response.data;
+};
+
+export const fetchPaymentsApi = async (): Promise<any> => {
+  const response = await api.get('/superadmin/payments');
+  return response.data;
+};

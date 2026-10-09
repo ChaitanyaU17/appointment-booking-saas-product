@@ -2,7 +2,7 @@ import { Box, Typography, Container, Grid, Link, TextField, Button, Divider } fr
 
 export default function Footer() {
   return (
-    <Box sx={{ bgcolor: '#0f172a', color: 'white', pt: 8, pb: 4, mt: 'auto' }}>
+    <Box component="footer" sx={{ bgcolor: '#0f172a', color: 'white', pt: 8, pb: 4, mt: 'auto' }}>
       <Container maxWidth="lg">
         <Grid container spacing={4} sx={{ mb: 6 }}>
           <Grid size={{ xs: 12, md: 3 }}>

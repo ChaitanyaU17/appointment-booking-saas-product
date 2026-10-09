@@ -25,8 +25,8 @@ export const connectGoogleCalendarApi = async (): Promise<any> => {
   return response.data;
 };
 
-export const updateBusinessPlanApi = async (planId: string): Promise<any> => {
-  const response = await api.put('/business/settings/plan', { planId });
+export const updateBusinessPlanApi = async ({ planId, variantId }: { planId: string; variantId?: string }): Promise<any> => {
+  const response = await api.put('/business/settings/plan', { planId, variantId });
   return response.data;
 };
 

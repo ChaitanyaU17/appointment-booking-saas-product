@@ -24,7 +24,7 @@ import { useNavigate } from 'react-router-dom';
 export default function PublicBooking() {
   const { slug } = useParams<{ slug: string }>();
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
+  const _navigate = useNavigate(); void _navigate;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
@@ -143,6 +143,21 @@ export default function PublicBooking() {
   );
 
   if (!business) return <Typography align="center" sx={{ mt: 4 }}>Business not found</Typography>;
+
+  if (business.isExpired) {
+    return (
+      <Container maxWidth="md" sx={{ py: 8 }}>
+        <Card sx={{ p: 6, textAlign: 'center', bgcolor: '#fef2f2', border: '1px solid #fecaca', borderRadius: 3 }}>
+          <Typography variant="h4" color="error.main" gutterBottom sx={{ fontWeight: 800 }}>
+            Currently Unavailable
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+            This business is currently not accepting new appointments. Please check back later or contact them directly.
+          </Typography>
+        </Card>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>

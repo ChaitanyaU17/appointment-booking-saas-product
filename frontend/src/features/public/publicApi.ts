@@ -34,3 +34,13 @@ export const createDemoRequestApi = async (data: any): Promise<any> => {
   const response = await api.post('/public/demo-request', data);
   return response.data;
 };
+
+export const fetchPaymentDetailsApi = async (token: string): Promise<any> => {
+  const response = await api.get(`/public/payment/${token}`);
+  return response.data;
+};
+
+export const processPaymentApi = async (token: string): Promise<any> => {
+  const response = await api.post(`/public/payment/${token}/pay`);
+  return response.data;
+};

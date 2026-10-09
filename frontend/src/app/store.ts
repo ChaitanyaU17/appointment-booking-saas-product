@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import authReducer from '../features/auth/authSlice';
 import appointmentsReducer from '../features/appointments/appointmentsSlice';
 import superadminReducer from '../features/superadmin/superadminSlice';
+import couponReducer from '../features/superadmin/couponSlice';
 import businessReducer from '../features/business/businessSlice';
 import customerReducer from '../features/customer/customerSlice';
 import publicReducer from '../features/public/publicSlice';
@@ -12,6 +13,7 @@ export const store = configureStore({
     auth: authReducer,
     appointments: appointmentsReducer,
     superadmin: superadminReducer,
+    coupons: couponReducer,
     business: businessReducer,
     customer: customerReducer,
     public: publicReducer,

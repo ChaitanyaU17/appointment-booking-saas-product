@@ -1,11 +1,12 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { 
-  fetchSuperadminDashboardApi, fetchBusinessesApi, createBusinessApi, updateBusinessApi, deleteBusinessApi,
+  fetchSuperadminDashboardApi, fetchBusinessesApi, fetchPaymentsApi, createBusinessApi, updateBusinessApi, deleteBusinessApi,
   fetchAdminsApi, createAdminApi, updateAdminApi, deleteAdminApi,
   approveBusinessApi, rejectBusinessApi, requestChangesBusinessApi,
   activateTrialApi,
   createDemoForRegistrationApi, markDemoConductedApi,
-  fetchDemoRequestsApi, approveDemoRequestApi, rejectDemoRequestApi, deleteDemoRequestApi
+  fetchDemoRequestsApi, approveDemoRequestApi, rejectDemoRequestApi, deleteDemoRequestApi,
+  generatePaymentLinkApi
 } from "./superadminApi";
 import {
   fetchPlansApi, createPlanApi, updatePlanApi, deletePlanApi, togglePlanApi
@@ -17,6 +18,9 @@ interface ISuperadminState {
   dashboardError: any;
   
   businesses: any[];
+  payments: any[];
+  paymentsLoading: boolean;
+  paymentsError: any;
   businessesLoading: boolean;
   businessesError: any;
   
@@ -39,6 +43,9 @@ const initialState: ISuperadminState = {
   dashboardError: null,
   
   businesses: [],
+  payments: [],
+  paymentsLoading: false,
+  paymentsError: null,
   businessesLoading: false,
   businessesError: null,
   
@@ -55,6 +62,18 @@ const initialState: ISuperadminState = {
   demoRequestsError: null,
 };
 
+
+export const fetchPayments = createAsyncThunk(
+  'superadmin/fetchPayments',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await fetchPaymentsApi();
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch payments');
+    }
+  }
+);
 export const fetchSuperadminDashboard = createAsyncThunk(
   'superadmin/fetchDashboard',
   async (_, { rejectWithValue }) => {
@@ -332,6 +351,17 @@ export const deleteDemoRequest = createAsyncThunk(
   }
 );
 
+export const generatePaymentLink = createAsyncThunk(
+  'superadmin/generatePaymentLink',
+  async ({ id, paymentBreakdown }: { id: string, paymentBreakdown: any }, { rejectWithValue }) => {
+    try {
+      return await generatePaymentLinkApi(id, paymentBreakdown);
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
 const superadminSlice = createSlice({
   name: "superadmin",
   initialState,
@@ -362,7 +392,19 @@ const superadminSlice = createSlice({
         state.dashboardError = action.payload;
       })
 
-      .addCase(fetchBusinesses.pending, (state) => {
+            .addCase(fetchPayments.pending, (state) => {
+        state.paymentsLoading = true;
+        state.paymentsError = null;
+      })
+      .addCase(fetchPayments.fulfilled, (state, action) => {
+        state.paymentsLoading = false;
+        state.payments = action.payload;
+      })
+      .addCase(fetchPayments.rejected, (state, action) => {
+        state.paymentsLoading = false;
+        state.paymentsError = action.payload as string;
+      })
+.addCase(fetchBusinesses.pending, (state) => {
         state.businessesLoading = true;
       })
       .addCase(fetchBusinesses.fulfilled, (state, action) => {
