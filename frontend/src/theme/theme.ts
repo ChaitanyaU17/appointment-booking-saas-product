@@ -146,4 +146,5 @@ const theme = createTheme({
   },
 });
 
+export * from './colors';
 export default theme;

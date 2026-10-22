@@ -68,9 +68,17 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
   const handleLogout = async () => {
     try {
+      const isAgent = location.pathname.startsWith('/agent');
+      const isSuperadmin = location.pathname.startsWith('/superadmin');
       await dispatch(logoutThunk()).unwrap();
       dispatch(showNotification({ message: 'Logged out successfully' }));
-      navigate('/login');
+      if (isAgent) {
+        navigate('/agent/login');
+      } else if (isSuperadmin) {
+        navigate('/superadmin/login');
+      } else {
+        navigate('/login');
+      }
     } catch (error: any) {
       const errorMsg = typeof error === 'string' ? error : error?.message || 'Failed to log out';
       dispatch(showNotification({ message: errorMsg, failure: true }));
@@ -79,7 +87,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
   const publicRoutes = ['/', '/contact-sales', '/help-center', '/security', '/integrations'];
   const isPublicPage = publicRoutes.includes(location.pathname) || location.pathname.startsWith('/b/');
-  const isDashboardPage = location.pathname.startsWith('/superadmin') || location.pathname.startsWith('/business') || location.pathname.startsWith('/customer');
+  const isDashboardPage = location.pathname.startsWith('/superadmin') || location.pathname.startsWith('/business') || location.pathname.startsWith('/customer') || location.pathname.startsWith('/agent');
 
   const navButtonSx = { color: 'text.primary', fontWeight: 600, textTransform: 'none', fontSize: '0.95rem' };
 

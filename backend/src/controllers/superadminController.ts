@@ -5,10 +5,12 @@ import bcrypt from 'bcryptjs';
 import { Request, Response } from 'express';
 import User, { UserRole } from '../models/User';
 import Business from '../models/Business';
+import Payment from '../models/Payment';
+import { sendPaymentLinkEmail, sendWelcomeCredentialsEmail } from '../utils/emailService';
 import Plan from '../models/Plan';
 import Service from '../models/Service';
 
-const cleanupDemoSandbox = async (business: any) => {
+export const cleanupDemoSandbox = async (business: any) => {
   if (business.demoBusinessId) {
     const adminUser = await User.findOne({ originalBusinessId: business._id });
     if (adminUser) {
@@ -45,6 +47,8 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<an
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
     
     const trendData = await Appointment.aggregate([
       { $match: { createdAt: { $gte: thirtyDaysAgo } } },
@@ -57,8 +61,6 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<an
       { $sort: { _id: 1 } }
     ]);
 
-    const formattedTrend = trendData.map(d => ({ date: d._id, count: d.count }));
-
     const typeData = await Appointment.aggregate([
       {
         $group: {
@@ -67,6 +69,43 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<an
         }
       }
     ]);
+
+    const successPayments = await Payment.find({ status: 'Success' });
+    
+    let grossCollections = 0;
+    let totalRevenue = 0;
+    
+    let last30Revenue = 0;
+    let prev30Revenue = 0;
+    
+    successPayments.forEach(p => {
+        const gross = p.amount || 0;
+        const gst = p.paymentBreakdown?.gstAmount || 0;
+        const net = gross - gst;
+        
+        grossCollections += gross;
+        totalRevenue += net;
+        
+        const date = new Date(p.createdAt);
+        if (date >= thirtyDaysAgo) {
+            last30Revenue += net;
+        } else if (date >= sixtyDaysAgo && date < thirtyDaysAgo) {
+            prev30Revenue += net;
+        }
+    });
+
+    let revenueTrend = 0;
+    if (prev30Revenue > 0) {
+        revenueTrend = ((last30Revenue - prev30Revenue) / prev30Revenue) * 100;
+    } else if (last30Revenue > 0) {
+        revenueTrend = 100;
+    }
+
+    const recentPayments = await Payment.find()
+      .populate('businessId', 'name')
+      .populate('planId', 'name')
+      .sort({ createdAt: -1 })
+      .limit(6);
 
     const recentBusinesses = await Business.find().sort({ createdAt: -1 }).limit(5);
     const recentAdmins = await User.find({ role: UserRole.BUSINESS_ADMIN }).sort({ createdAt: -1 }).limit(5);
@@ -83,8 +122,14 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<an
         type: 'admin',
         message: `New admin '${a.name}' registered`,
         date: (a as any).createdAt || new Date()
+      })),
+      ...recentPayments.filter(p => p.status === 'Success').map(p => ({
+        id: p._id,
+        type: 'payment',
+        message: `Received ₹${p.amount?.toFixed(2)} from '${(p.businessId as any)?.name || 'Unknown'}'`,
+        date: (p as any).createdAt || new Date()
       }))
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6);
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 8);
 
     res.json({
       totalBusinesses,
@@ -95,6 +140,10 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<an
       totalAppointments,
       activeTrials,
       appointmentsToday,
+      totalRevenue,
+      grossCollections,
+      revenueTrend,
+      recentPayments,
       trendData: trendData.map(d => ({ date: d._id, count: d.count })),
       typeData: typeData.map(d => ({ name: d._id, value: d.value })),
       recentActivity
@@ -114,17 +163,28 @@ export const getBusinesses = async (req: Request, res: Response): Promise<any> =
     // Fetch all business admins to map owner names
     const admins = await User.find({ role: UserRole.BUSINESS_ADMIN }, 'name email phone businessId originalBusinessId').lean();
     
-    const businessesWithOwner = businesses.map(b => {
+    // Fetch stats for each business
+    const businessesWithOwnerAndStats = await Promise.all(businesses.map(async (b) => {
       const admin = admins.find(a => a.businessId?.toString() === b._id.toString() || a.originalBusinessId?.toString() === b._id.toString());
+      
+      const appointmentsCount = await Appointment.find({ businessId: b._id as any }).countDocuments();
+      const walkinsCount = await Appointment.find({ businessId: b._id as any, type: 'Walk-in' as any }).countDocuments();
+      const servicesCount = await Service.find({ businessId: b._id as any }).countDocuments();
+      
       return {
         ...b,
-        ownerName: admin?.name || null,
+        ownerName: (b as any).ownerName || admin?.name || null,
         ownerEmail: admin?.email || null,
         ownerPhone: admin?.phone || null,
+        stats: {
+          appointments: appointmentsCount,
+          walkins: walkinsCount,
+          services: servicesCount
+        }
       };
-    });
+    }));
 
-    res.json(businessesWithOwner);
+    res.json(businessesWithOwnerAndStats);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -176,14 +236,41 @@ export const updateBusiness = async (req: Request, res: Response): Promise<any> 
     const business = await Business.findById(id);
 
     if (business) {
-      business.name = name || business.name;
-      business.slug = slug || business.slug;
+      const oldBizName = business.name;
+      if (name) business.name = name.trim();
+      
+      if (slug && slug.trim()) {
+        business.slug = slug.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '');
+      } else if (name && name.trim() && (name.trim() !== oldBizName || !business.slug || business.slug.startsWith('shop-'))) {
+        let baseSlug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+        if (!baseSlug) {
+          baseSlug = `shop-${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+        let finalSlug = baseSlug;
+        const slugExists = await Business.findOne({ slug: finalSlug, _id: { $ne: business._id } });
+        if (slugExists) {
+          finalSlug = `${baseSlug}-${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+        business.slug = finalSlug;
+      }
+
+      if (req.body.ownerName) business.ownerName = req.body.ownerName.trim();
       business.description = description || business.description;
       if (email !== undefined) business.email = email;
       if (phone !== undefined) business.phone = phone;
       if (category) business.category = category;
       if (registrationNumber) business.registrationNumber = registrationNumber;
       if (settings) business.settings = settings;
+      if (req.body.planVariantId !== undefined) business.planVariantId = req.body.planVariantId;
+      if (req.body.planStartDate !== undefined) business.planStartDate = req.body.planStartDate;
+      if (req.body.planEndDate !== undefined) business.planEndDate = req.body.planEndDate;
+      if (req.body.subscriptionStart !== undefined) business.subscriptionStart = req.body.subscriptionStart;
+      if (req.body.subscriptionEnd !== undefined) business.subscriptionEnd = req.body.subscriptionEnd;
+      if (req.body.clearRequestedPlan) business.requestedPlanId = undefined;
+      if (req.body.paymentStatus !== undefined) business.paymentStatus = req.body.paymentStatus;
+      if (req.body.paymentBreakdown !== undefined) business.paymentBreakdown = req.body.paymentBreakdown;
+      if (req.body.paymentBreakdown === null) business.paymentBreakdown = undefined;
+      
       if (planId !== undefined) {
         business.planId = planId;
         // If manually assigning a plan, clear any active trial
@@ -215,8 +302,21 @@ export const deleteBusiness = async (req: Request, res: Response): Promise<any> 
     if (business) {
       await cleanupDemoSandbox(business);
       await business.deleteOne();
-      await User.deleteMany({ businessId: business._id });
-      await Appointment.deleteMany({ businessId: business._id });
+      await Promise.all([
+        User.deleteMany({
+          $or: [
+            { businessId: business._id },
+            { originalBusinessId: business._id }
+          ]
+        }),
+        Appointment.deleteMany({ businessId: business._id }),
+        Service.deleteMany({ businessId: business._id }),
+        Payment.deleteMany({ businessId: business._id }),
+        User.updateMany(
+          { assignedBusinessIds: business._id },
+          { $pull: { assignedBusinessIds: business._id } }
+        )
+      ]);
       res.json({ message: 'Business removed' });
     } else {
       res.status(404).json({ message: 'Business not found' });
@@ -230,7 +330,7 @@ export const deleteBusiness = async (req: Request, res: Response): Promise<any> 
 export const getBusinessAdmins = async (req: Request, res: Response): Promise<any> => {
   try {
     const admins = await User.find({ role: UserRole.BUSINESS_ADMIN })
-      .populate('businessId', 'name')
+      .populate('businessId', 'name slug ownerName')
       .select('-password');
     res.json(admins);
   } catch (error: any) {
@@ -260,7 +360,31 @@ export const createBusinessAdmin = async (req: Request, res: Response): Promise<
     });
 
     const createdUser = await user.save();
-    res.status(201).json(createdUser);
+
+    if (businessId) {
+      const biz = await Business.findById(businessId);
+      if (biz) {
+        if (!biz.ownerName || biz.ownerName === 'N/A') {
+          biz.ownerName = name.trim();
+        }
+        if (!biz.name) {
+          biz.name = name.trim();
+          let baseSlug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+          if (baseSlug) {
+            let finalSlug = baseSlug;
+            const conflict = await Business.findOne({ slug: finalSlug, _id: { $ne: biz._id } });
+            if (conflict) finalSlug = `${baseSlug}-${Math.floor(1000 + Math.random() * 9000)}`;
+            biz.slug = finalSlug;
+          }
+        }
+        await biz.save();
+      }
+    }
+
+    const populated = await User.findById(createdUser._id)
+      .populate('businessId', 'name slug ownerName')
+      .select('-password');
+    res.status(201).json(populated || createdUser);
   } catch (error: any) {
     console.error('Error creating admin:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -277,8 +401,11 @@ export const updateBusinessAdmin = async (req: Request, res: Response): Promise<
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (name) user.name = name;
-    if (email) user.email = email;
+    const oldName = user.name;
+    const oldEmail = user.email;
+
+    if (name) user.name = name.trim();
+    if (email) user.email = email.trim().toLowerCase();
     if (businessId) user.businessId = businessId;
 
     if (password) {
@@ -287,7 +414,62 @@ export const updateBusinessAdmin = async (req: Request, res: Response): Promise<
     }
 
     const updatedUser = await user.save();
-    res.json(updatedUser);
+
+    // Synchronize linked Business document (e.g. agent registered user/shop)
+    const targetBusinessId = user.businessId || (user as any).originalBusinessId || businessId;
+    let business = targetBusinessId ? await Business.findById(targetBusinessId) : null;
+    if (!business) {
+      business = await Business.findOne({
+        $or: [
+          { email: oldEmail },
+          { email: user.email }
+        ]
+      });
+    }
+
+    if (business) {
+      if (name && name.trim()) {
+        const trimmedName = name.trim();
+        business.ownerName = trimmedName;
+
+        // If business name was empty, or equal to old user name, keep business name in sync
+        if (!business.name || business.name.trim() === '' || business.name === oldName) {
+          business.name = trimmedName;
+        }
+
+        // Regenerate unique slug according to the updated name
+        let baseSlug = (business.name || trimmedName)
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)+/g, '');
+
+        if (!baseSlug) {
+          baseSlug = `shop-${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+
+        let finalSlug = baseSlug;
+        const slugExists = await Business.findOne({
+          slug: finalSlug,
+          _id: { $ne: business._id }
+        });
+        if (slugExists) {
+          finalSlug = `${baseSlug}-${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+        business.slug = finalSlug;
+      }
+
+      if (email && email.trim()) {
+        business.email = email.trim().toLowerCase();
+      }
+
+      await business.save();
+    }
+
+    const populatedUser = await User.findById(updatedUser._id)
+      .populate('businessId', 'name slug ownerName')
+      .select('-password');
+
+    res.json(populatedUser || updatedUser);
   } catch (error: any) {
     console.error('Error updating admin:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -676,5 +858,444 @@ export const deleteDemoRequest = async (req: Request, res: Response): Promise<an
     res.json({ message: 'Deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const generatePaymentLink = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { id } = req.params;
+    const business = await Business.findById(id);
+    if (!business) return res.status(404).json({ message: 'Business not found' });
+    
+    const token = (business.paymentToken && business.paymentStatus === 'Pending') ? business.paymentToken : Math.random().toString(36).substring(2, 15);
+    business.paymentToken = token;
+    business.paymentLinkGeneratedAt = new Date();
+    business.paymentStatus = 'Pending';
+    
+    business.paymentBreakdown = req.body.paymentBreakdown || business.paymentBreakdown;
+    
+    await business.save();
+    
+    const paymentLinkFull = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/pay/${token}`;
+    
+    if (business.email) {
+      try {
+        const planName = business.paymentBreakdown?.planName || 'your selected plan';
+        const totalAmount = business.paymentBreakdown?.totalAmount || 0;
+        await sendPaymentLinkEmail(business.email, business.name, planName, totalAmount, paymentLinkFull);
+        console.log(`Payment link successfully emailed to: ${business.email}`);
+      } catch (err) {
+        console.error('Email failed:', err);
+      }
+    }
+    
+    res.json({ paymentLink: `/pay/${token}`, business, emailSent: !!business.email });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const getPayments = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const payments = await Payment.find()
+      .populate('businessId', 'name phone email')
+      .populate('ownerId', 'name email')
+      .populate('planId', 'name')
+      .sort({ createdAt: -1 });
+    res.json(payments);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const registerBusinessByAdmin = async (req: Request, res: Response): Promise<any> => {
+  const {
+    name,
+    ownerName,
+    email,
+    ownerEmail,
+    phone,
+    ownerPhone,
+    password,
+    additionalNotes,
+    businessName,
+    sendWelcomeEmail
+  } = req.body;
+
+  try {
+    const finalOwnerName = (name || ownerName || '').trim();
+    const finalEmail = (email || ownerEmail || '').toLowerCase().trim();
+    const finalPhone = (phone || ownerPhone || '').trim();
+    const finalBusinessName = (businessName || finalOwnerName).trim();
+
+    if (!finalOwnerName || !finalEmail) {
+      return res.status(400).json({ message: 'Owner name and email are required' });
+    }
+
+    const existingUser = await User.findOne({ email: finalEmail });
+    if (existingUser) {
+      return res.status(400).json({ message: 'A user with this email already exists' });
+    }
+
+    if (finalPhone) {
+      const existingPhone = await User.findOne({ phone: finalPhone });
+      if (existingPhone) {
+        return res.status(400).json({ message: 'A user with this phone number already exists' });
+      }
+    }
+
+    // Resolve Slug
+    let baseSlug = finalBusinessName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)+/g, '');
+
+    if (!baseSlug) {
+      baseSlug = `shop-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+
+    let finalSlug = baseSlug;
+    const slugExists = await Business.findOne({ slug: finalSlug });
+    if (slugExists) {
+      finalSlug = `${baseSlug}-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+
+    // Resolve Password (manual enter, or fallback)
+    const rawPassword = (password || '').trim() || 'Password123!';
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(rawPassword, salt);
+
+    // Directly Approved & Active on Onboarded Shops
+    const business = new Business({
+      name: finalBusinessName,
+      slug: finalSlug,
+      category: 'General',
+      registrationNumber: 'N/A',
+      additionalNotes: additionalNotes || '',
+      description: additionalNotes || '',
+      email: finalEmail,
+      phone: finalPhone || 'N/A',
+      ownerName: finalOwnerName,
+      verificationStatus: 'Approved',
+      subscriptionStatus: 'active',
+      trialStatus: 'None',
+      planStartDate: new Date(),
+    });
+
+    await business.save();
+
+    // Create User (BusinessAdmin)
+    let user: any;
+    try {
+      user = new User({
+        name: finalOwnerName,
+        email: finalEmail,
+        phone: finalPhone || undefined,
+        password: hashedPassword,
+        role: UserRole.BUSINESS_ADMIN,
+        businessId: business._id
+      });
+      await user.save();
+    } catch (userErr: any) {
+      await Business.findByIdAndDelete(business._id);
+      throw userErr;
+    }
+
+    // Optional email dispatch
+    if (sendWelcomeEmail !== false) {
+      try {
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const loginUrl = `${frontendUrl}/login`;
+        await sendWelcomeCredentialsEmail({
+          to: finalEmail,
+          ownerName: finalOwnerName,
+          businessName: finalBusinessName,
+          email: finalEmail,
+          password: rawPassword,
+          loginUrl,
+          isDirectActive: true
+        });
+      } catch (emailErr) {
+        console.error('Non-critical: Failed to send welcome credentials email:', emailErr);
+      }
+    }
+
+    const populatedBusiness = await Business.findById(business._id)
+      .populate('planId', 'name slug price variants');
+
+    res.status(201).json({
+      message: `Shop "${finalBusinessName}" registered and onboarded successfully!`,
+      business: populatedBusiness,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        businessId: user.businessId
+      },
+      credentials: {
+        email: finalEmail,
+        password: rawPassword
+      }
+    });
+  } catch (error: any) {
+    console.error('Error in registerBusinessByAdmin:', error);
+    res.status(500).json({ message: error?.message || 'Server error during business registration' });
+  }
+};
+
+// ==========================================
+// AGENT MANAGEMENT (SUPERADMIN CONTROLS)
+// ==========================================
+
+export const getAgents = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const agents = await User.find({ role: UserRole.AGENT })
+      .select('-password')
+      .populate('assignedBusinessIds', 'name slug verificationStatus category phone email')
+      .sort({ createdAt: -1 });
+
+    res.json(agents);
+  } catch (error: any) {
+    console.error('Error in getAgents:', error);
+    res.status(500).json({ message: 'Server error while fetching agents' });
+  }
+};
+
+export const getAgentById = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const agent = await User.findOne({ _id: req.params.id, role: UserRole.AGENT })
+      .select('-password');
+
+    if (!agent) {
+      return res.status(404).json({ message: 'Agent not found' });
+    }
+
+    const registeredShops = await Business.find({
+      $or: [
+        { registeredByAgentId: agent._id },
+        { assignedAgentId: agent._id },
+        { _id: { $in: agent.assignedBusinessIds || [] } }
+      ]
+    })
+      .populate('planId', 'name price')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      ...agent.toObject(),
+      registeredShops
+    });
+  } catch (error: any) {
+    console.error('Error in getAgentById:', error);
+    res.status(500).json({ message: 'Server error while fetching agent' });
+  }
+};
+
+export const createAgent = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { name, email, phone, password, permissions, assignedBusinessIds } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Name, email, and password are required' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const existingUser = await User.findOne({ email: cleanEmail });
+    if (existingUser) {
+      return res.status(400).json({ message: 'A user with this email already exists' });
+    }
+
+    if (phone && phone.trim()) {
+      const existingPhone = await User.findOne({ phone: phone.trim() });
+      if (existingPhone) {
+        return res.status(400).json({ message: 'A user with this phone number already exists' });
+      }
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password.trim(), salt);
+
+    const safePermissions = {
+      canManageShopProfile: permissions?.canManageShopProfile !== false,
+      canManageOnboarding: permissions?.canManageOnboarding !== false,
+      canManageAppointments: permissions?.canManageAppointments !== false,
+      canManageBilling: permissions?.canManageBilling !== false,
+      canAccessRegistration: permissions?.canAccessRegistration !== false,
+      canAccessOnboardedShops: permissions?.canAccessOnboardedShops !== false,
+      canAccessExpiredShops: Boolean(permissions?.canAccessExpiredShops),
+      canAccessBusinessAdmins: Boolean(permissions?.canAccessBusinessAdmins),
+      canAccessPlans: Boolean(permissions?.canAccessPlans),
+      canAccessCoupons: Boolean(permissions?.canAccessCoupons),
+      canAccessDemoRequests: Boolean(permissions?.canAccessDemoRequests),
+      canAccessPayments: Boolean(permissions?.canAccessPayments),
+      canRegisterShops: permissions?.canRegisterShops !== false,
+    };
+
+    const businessIds = Array.isArray(assignedBusinessIds) ? assignedBusinessIds : [];
+
+    const agent = new User({
+      name: name.trim(),
+      email: cleanEmail,
+      phone: phone ? phone.trim() : undefined,
+      password: hashedPassword,
+      role: UserRole.AGENT,
+      permissions: safePermissions,
+      assignedBusinessIds: businessIds,
+      isActive: true,
+    });
+
+    await agent.save();
+
+    // Sync assignedBusinessIds to Business documents
+    if (businessIds.length > 0) {
+      await Business.updateMany(
+        { _id: { $in: businessIds } },
+        { $set: { assignedAgentId: agent._id } }
+      );
+    }
+
+    const populatedAgent = await User.findById(agent._id)
+      .select('-password');
+
+    res.status(201).json({
+      ...populatedAgent?.toObject(),
+      registeredShops: []
+    });
+  } catch (error: any) {
+    console.error('Error in createAgent:', error);
+    res.status(500).json({ message: error?.message || 'Server error while creating agent' });
+  }
+};
+
+export const updateAgent = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { id } = req.params;
+    const { name, email, phone, password, permissions, assignedBusinessIds, isActive } = req.body;
+
+    const agent = await User.findOne({ _id: id, role: UserRole.AGENT });
+    if (!agent) {
+      return res.status(404).json({ message: 'Agent not found' });
+    }
+
+    if (name) agent.name = name.trim();
+    if (email) {
+      const cleanEmail = email.toLowerCase().trim();
+      if (cleanEmail !== agent.email) {
+        const emailTaken = await User.findOne({ email: cleanEmail });
+        if (emailTaken) {
+          return res.status(400).json({ message: 'Email is already taken by another user' });
+        }
+        agent.email = cleanEmail;
+      }
+    }
+
+    if (phone !== undefined) {
+      const cleanPhone = phone ? phone.trim() : undefined;
+      if (cleanPhone && cleanPhone !== agent.phone) {
+        const phoneTaken = await User.findOne({ phone: cleanPhone });
+        if (phoneTaken) {
+          return res.status(400).json({ message: 'Phone number is already taken' });
+        }
+      }
+      agent.phone = cleanPhone;
+    }
+
+    if (password && password.trim()) {
+      const salt = await bcrypt.genSalt(10);
+      agent.password = await bcrypt.hash(password.trim(), salt);
+    }
+
+    if (permissions) {
+      agent.permissions = {
+        canManageShopProfile: permissions.canManageShopProfile !== undefined ? permissions.canManageShopProfile : agent.permissions?.canManageShopProfile ?? true,
+        canManageOnboarding: permissions.canManageOnboarding !== undefined ? permissions.canManageOnboarding : agent.permissions?.canManageOnboarding ?? true,
+        canManageAppointments: permissions.canManageAppointments !== undefined ? permissions.canManageAppointments : agent.permissions?.canManageAppointments ?? true,
+        canManageBilling: permissions.canManageBilling !== undefined ? permissions.canManageBilling : agent.permissions?.canManageBilling ?? true,
+        canAccessRegistration: permissions.canAccessRegistration !== undefined ? permissions.canAccessRegistration : agent.permissions?.canAccessRegistration ?? true,
+        canAccessOnboardedShops: permissions.canAccessOnboardedShops !== undefined ? permissions.canAccessOnboardedShops : agent.permissions?.canAccessOnboardedShops ?? true,
+        canAccessExpiredShops: permissions.canAccessExpiredShops !== undefined ? permissions.canAccessExpiredShops : agent.permissions?.canAccessExpiredShops ?? false,
+        canAccessBusinessAdmins: permissions.canAccessBusinessAdmins !== undefined ? permissions.canAccessBusinessAdmins : agent.permissions?.canAccessBusinessAdmins ?? false,
+        canAccessPlans: permissions.canAccessPlans !== undefined ? permissions.canAccessPlans : agent.permissions?.canAccessPlans ?? false,
+        canAccessCoupons: permissions.canAccessCoupons !== undefined ? permissions.canAccessCoupons : agent.permissions?.canAccessCoupons ?? false,
+        canAccessDemoRequests: permissions.canAccessDemoRequests !== undefined ? permissions.canAccessDemoRequests : agent.permissions?.canAccessDemoRequests ?? false,
+        canAccessPayments: permissions.canAccessPayments !== undefined ? permissions.canAccessPayments : agent.permissions?.canAccessPayments ?? false,
+        canRegisterShops: permissions.canRegisterShops !== undefined ? permissions.canRegisterShops : agent.permissions?.canRegisterShops ?? true,
+      };
+    }
+
+    if (isActive !== undefined) {
+      agent.isActive = Boolean(isActive);
+    }
+
+    if (Array.isArray(assignedBusinessIds)) {
+      const oldAssigned = (agent.assignedBusinessIds || []).map((bId) => bId.toString());
+      const newAssigned = assignedBusinessIds.map((bId: any) => bId.toString());
+
+      // Businesses removed: unset assignedAgentId
+      const removed = oldAssigned.filter((bId) => !newAssigned.includes(bId));
+      if (removed.length > 0) {
+        await Business.updateMany(
+          { _id: { $in: removed }, assignedAgentId: agent._id },
+          { $set: { assignedAgentId: null } }
+        );
+      }
+
+      // Businesses added: set assignedAgentId
+      const added = newAssigned.filter((bId) => !oldAssigned.includes(bId));
+      if (added.length > 0) {
+        await Business.updateMany(
+          { _id: { $in: added } },
+          { $set: { assignedAgentId: agent._id } }
+        );
+      }
+
+      agent.assignedBusinessIds = assignedBusinessIds;
+    }
+
+    await agent.save();
+
+    const populated = await User.findById(agent._id)
+      .select('-password');
+
+    const registeredShops = await Business.find({
+      $or: [
+        { registeredByAgentId: agent._id },
+        { assignedAgentId: agent._id },
+        { _id: { $in: agent.assignedBusinessIds || [] } }
+      ]
+    })
+      .populate('planId', 'name price')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      ...populated?.toObject(),
+      registeredShops
+    });
+  } catch (error: any) {
+    console.error('Error in updateAgent:', error);
+    res.status(500).json({ message: error?.message || 'Server error while updating agent' });
+  }
+};
+
+export const deleteAgent = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { id } = req.params;
+    const agent = await User.findOne({ _id: id, role: UserRole.AGENT });
+    if (!agent) {
+      return res.status(404).json({ message: 'Agent not found' });
+    }
+
+    // Unassign all businesses
+    await Business.updateMany(
+      { assignedAgentId: agent._id },
+      { $set: { assignedAgentId: null } }
+    );
+
+    await User.findByIdAndDelete(agent._id);
+    res.json({ message: 'Agent removed successfully' });
+  } catch (error: any) {
+    console.error('Error in deleteAgent:', error);
+    res.status(500).json({ message: error?.message || 'Server error while deleting agent' });
   }
 };

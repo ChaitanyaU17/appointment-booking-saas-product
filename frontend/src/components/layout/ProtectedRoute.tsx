@@ -21,6 +21,12 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   }
 
   if (!isAuthenticated || !user) {
+    if (window.location.pathname.startsWith('/agent')) {
+      return <Navigate to="/agent/login" replace />;
+    }
+    if (window.location.pathname.startsWith('/superadmin')) {
+      return <Navigate to="/superadmin/login" replace />;
+    }
     return <Navigate to="/login" replace />;
   }
 
@@ -33,6 +39,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   if (allowedRoles && !allowedRoles.includes(user.role)) {
 
     if (user.role === 'Superadmin') return <Navigate to="/superadmin" replace />;
+    if (user.role === 'Agent') return <Navigate to="/agent" replace />;
     if (user.role === 'BusinessAdmin') return <Navigate to="/business" replace />;
     return <Navigate to="/customer/dashboard" replace />;
   }

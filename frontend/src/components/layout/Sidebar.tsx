@@ -13,6 +13,7 @@ import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import HowToRegIcon from '@mui/icons-material/HowToReg';
 import PeopleIcon from '@mui/icons-material/People';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
+import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 
 export const drawerWidth = 240;
 
@@ -33,6 +34,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
     { text: 'Registration', icon: <HowToRegIcon />, path: '/superadmin/registration' },
     { text: 'Onboarded Shops', icon: <StoreIcon />, path: '/superadmin/shops' },
     { text: 'Expired Shops', icon: <EventBusyIcon />, path: '/superadmin/expired-shops' },
+    { text: 'Agents', icon: <SupportAgentIcon />, path: '/superadmin/agents' },
     { text: 'Business Admins', icon: <PeopleIcon />, path: '/superadmin/admins' },
     { text: 'Plans', icon: <CardMembershipIcon />, path: '/superadmin/plans' },
     { text: 'Coupons', icon: <LocalOfferIcon />, path: '/superadmin/coupons' },
@@ -46,7 +48,27 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
     { text: 'Settings', icon: <SettingsIcon />, path: '/business/settings' },
   ];
 
-  const links = user?.role === 'Superadmin' ? superadminLinks : user?.role === 'BusinessAdmin' ? businessLinks : [];
+  const perms = (user as any)?.permissions || {};
+  const agentLinks = [
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/agent' },
+    ...(perms.canAccessRegistration ? [{ text: 'Registration', icon: <HowToRegIcon />, path: '/agent/registration' }] : []),
+    ...(perms.canAccessOnboardedShops !== false ? [{ text: 'Onboarded Shops', icon: <StoreIcon />, path: '/agent/shops' }] : []),
+    ...(perms.canAccessExpiredShops ? [{ text: 'Expired Shops', icon: <EventBusyIcon />, path: '/agent/expired-shops' }] : []),
+    ...(perms.canAccessBusinessAdmins ? [{ text: 'Business Admins', icon: <PeopleIcon />, path: '/agent/admins' }] : []),
+    ...(perms.canAccessPlans ? [{ text: 'Plans', icon: <CardMembershipIcon />, path: '/agent/plans' }] : []),
+    ...(perms.canAccessCoupons ? [{ text: 'Coupons', icon: <LocalOfferIcon />, path: '/agent/coupons' }] : []),
+    ...(perms.canAccessDemoRequests ? [{ text: 'Demo Requests', icon: <EventIcon />, path: '/agent/demo-requests' }] : []),
+    ...(perms.canAccessPayments ? [{ text: 'Payments', icon: <PaymentIcon />, path: '/agent/payments' }] : []),
+    ...(perms.canManageAppointments !== false ? [{ text: 'Appointments', icon: <EventIcon />, path: '/agent/appointments' }] : []),
+  ];
+
+  const links = user?.role === 'Superadmin'
+    ? superadminLinks
+    : user?.role === 'Agent'
+    ? agentLinks
+    : user?.role === 'BusinessAdmin'
+    ? businessLinks
+    : [];
 
   const content = (
     <Box>
@@ -56,7 +78,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       <Box sx={{ overflow: 'auto' }}>
         <List sx={{ px: 1 }}>
           {links.map((link) => {
-            const active = location.pathname === link.path;
+            const active = location.pathname === link.path || (link.path !== '/agent' && link.path !== '/superadmin' && link.path !== '/business' && location.pathname.startsWith(link.path));
             return (
               <ListItem key={link.text} disablePadding sx={{ mb: 0.5 }} id={`tour-nav-${link.text.toLowerCase().replace(/\s+/g, '-')}`}>
                 <ListItemButton

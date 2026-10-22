@@ -19,6 +19,7 @@ const Integrations = lazy(() => import('./pages/public/Integrations'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const SuperadminLogin = lazy(() => import('./pages/superadmin/Login'));
+const AgentLogin = lazy(() => import('./pages/agent/Login'));
 const SuperadminDashboard = lazy(() => import('./pages/superadmin/Dashboard'));
 const Registration = lazy(() => import('./pages/superadmin/Registration'));
 const OnboardedShops = lazy(() => import('./pages/superadmin/OnboardedShops'));
@@ -32,6 +33,13 @@ const CouponForm = lazy(() => import('./pages/superadmin/CouponForm'));
 const PlanForm = lazy(() => import('./pages/superadmin/PlanForm'));
 const DemoRequests = lazy(() => import('./pages/superadmin/DemoRequests'));
 const Payments = lazy(() => import('./pages/superadmin/Payments'));
+const Agents = lazy(() => import('./pages/superadmin/Agents'));
+const AgentDetails = lazy(() => import('./pages/superadmin/AgentDetails'));
+const AgentForm = lazy(() => import('./pages/superadmin/AgentForm'));
+const AgentDashboard = lazy(() => import('./pages/agent/Dashboard'));
+const AssignedShops = lazy(() => import('./pages/agent/AssignedShops'));
+const ShopOnboarding = lazy(() => import('./pages/agent/ShopOnboarding'));
+const AssignedAppointments = lazy(() => import('./pages/agent/AssignedAppointments'));
 const BusinessDashboard = lazy(() => import('./pages/business/Dashboard'));
 const Appointments = lazy(() => import('./pages/business/Appointments'));
 const Settings = lazy(() => import('./pages/business/Settings'));
@@ -62,6 +70,7 @@ const router = createBrowserRouter([
       { path: "login", element: <Suspense fallback={<LoadingFallback />}><Login /></Suspense> },
       { path: "register", element: <Suspense fallback={<LoadingFallback />}><Register /></Suspense> },
       { path: "superadmin/login", element: <Suspense fallback={<LoadingFallback />}><SuperadminLogin /></Suspense> },
+      { path: "agent/login", element: <Suspense fallback={<LoadingFallback />}><AgentLogin /></Suspense> },
       { path: "b/:slug", element: <Suspense fallback={<LoadingFallback />}><PublicBooking /></Suspense> },
       {
         path: "customer/dashboard",
@@ -84,6 +93,10 @@ const router = createBrowserRouter([
       { path: "allocate-plan/:id", element: <Suspense fallback={<LoadingFallback />}><AllocatePlan /></Suspense> },
       { path: "shops/:id", element: <Suspense fallback={<LoadingFallback />}><ShopDetails /></Suspense> },
       { path: "admins", element: <Suspense fallback={<LoadingFallback />}><Admins /></Suspense> },
+      { path: "agents", element: <Suspense fallback={<LoadingFallback />}><Agents /></Suspense> },
+      { path: "agents/:id", element: <Suspense fallback={<LoadingFallback />}><AgentDetails /></Suspense> },
+      { path: "agents/create", element: <Suspense fallback={<LoadingFallback />}><AgentForm /></Suspense> },
+      { path: "agents/edit/:id", element: <Suspense fallback={<LoadingFallback />}><AgentForm /></Suspense> },
       { path: "plans", element: <Suspense fallback={<LoadingFallback />}><Plans /></Suspense> },
       { path: "coupons", element: <Suspense fallback={<LoadingFallback />}><Coupons /></Suspense> },
       { path: "coupons/create", element: <Suspense fallback={<LoadingFallback />}><CouponForm /></Suspense> },
@@ -92,6 +105,27 @@ const router = createBrowserRouter([
       { path: "plan-edit/:id", element: <Suspense fallback={<LoadingFallback />}><PlanForm /></Suspense> },
       { path: "demo-requests", element: <Suspense fallback={<LoadingFallback />}><DemoRequests /></Suspense> },
       { path: "payments", element: <Suspense fallback={<LoadingFallback />}><Payments /></Suspense> },
+    ]
+  },
+  {
+    path: "/agent",
+    element: (
+      <ProtectedRoute allowedRoles={['Agent']}><DashboardLayout /></ProtectedRoute>
+    ),
+    children: [
+      { path: "", element: <Suspense fallback={<LoadingFallback />}><AgentDashboard /></Suspense> },
+      { path: "registration", element: <Suspense fallback={<LoadingFallback />}><Registration /></Suspense> },
+      { path: "shops", element: <Suspense fallback={<LoadingFallback />}><AssignedShops /></Suspense> },
+      { path: "shops/:id", element: <Suspense fallback={<LoadingFallback />}><ShopDetails /></Suspense> },
+      { path: "shops/:id/onboarding", element: <Suspense fallback={<LoadingFallback />}><ShopOnboarding /></Suspense> },
+      { path: "allocate-plan/:id", element: <Suspense fallback={<LoadingFallback />}><AllocatePlan /></Suspense> },
+      { path: "expired-shops", element: <Suspense fallback={<LoadingFallback />}><ExpiredShops /></Suspense> },
+      { path: "admins", element: <Suspense fallback={<LoadingFallback />}><Admins /></Suspense> },
+      { path: "plans", element: <Suspense fallback={<LoadingFallback />}><Plans /></Suspense> },
+      { path: "coupons", element: <Suspense fallback={<LoadingFallback />}><Coupons /></Suspense> },
+      { path: "demo-requests", element: <Suspense fallback={<LoadingFallback />}><DemoRequests /></Suspense> },
+      { path: "payments", element: <Suspense fallback={<LoadingFallback />}><Payments /></Suspense> },
+      { path: "appointments", element: <Suspense fallback={<LoadingFallback />}><AssignedAppointments /></Suspense> },
     ]
   },
   {

@@ -5,6 +5,7 @@ import Business from '../models/Business';
 import Appointment, { AppointmentStatus, AppointmentType, PaymentStatus } from '../models/Appointment';
 import User from '../models/User';
 import Service from '../models/Service';
+import { isBusinessExpired } from '../utils/businessUtils';
 
 export const getBusinessDashboardStats = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -126,6 +127,7 @@ export const getBusinessDashboardStats = async (req: Request, res: Response): Pr
       trialDaysLeft,
       planName: plan?.name || null,
       isDemoAccount: business.isDemoAccount,
+      isExpired: await isBusinessExpired(business),
       onboardingMeetLink: business.onboardingMeetLink,
       typeData: [
         { name: 'Walk-in', value: totalWalkins },
@@ -156,8 +158,9 @@ export const getBusinessSettings = async (req: Request, res: Response): Promise<
     const bookingUrl = `${process.env.FRONTEND_URL}/b/${business.slug}`;
     const qrCode = await QRCode.toDataURL(bookingUrl);
 
+    const isExpired = await isBusinessExpired(business);
     res.json({
-      business,
+      business: { ...business.toObject(), isExpired },
       admin,
       bookingUrl,
       qrCode,
@@ -171,6 +174,10 @@ export const getBusinessSettings = async (req: Request, res: Response): Promise<
 export const updateBusinessSettings = async (req: Request, res: Response): Promise<any> => {
   try {
     const user = (req as any).user;
+    const businessCheck = await Business.findById(user.businessId);
+    if (businessCheck && await isBusinessExpired(businessCheck)) {
+      return res.status(403).json({ message: 'Action blocked. Your subscription has expired. Please renew to continue.' });
+    }
     const { name, description, logo, settings } = req.body;
 
     const business = await Business.findById(user.businessId);
@@ -231,6 +238,12 @@ export const getBusinessAppointments = async (req: Request, res: Response): Prom
 export const createManualAppointment = async (req: Request, res: Response): Promise<any> => {
   try {
     const user = (req as any).user;
+    const business = await Business.findById(user.businessId);
+    if (!business) return res.status(404).json({ message: 'Business not found' });
+    if (await isBusinessExpired(business)) {
+      return res.status(403).json({ message: 'Action blocked. Your subscription has expired. Please renew to continue.' });
+    }
+
     const { customerName, customerEmail, customerPhone, title, description, startTime, endTime, type, price } = req.body;
 
     let eventId;
@@ -294,6 +307,12 @@ export const createManualAppointment = async (req: Request, res: Response): Prom
 export const updateAppointmentStatus = async (req: Request, res: Response): Promise<any> => {
   try {
     const user = (req as any).user;
+    const business = await Business.findById(user.businessId);
+    if (!business) return res.status(404).json({ message: 'Business not found' });
+    if (await isBusinessExpired(business)) {
+      return res.status(403).json({ message: 'Action blocked. Your subscription has expired. Please renew to continue.' });
+    }
+
     const { status } = req.body;
     
     const appointment = await Appointment.findOne({ _id: req.params.id, businessId: user.businessId });
@@ -341,6 +360,12 @@ export const getServices = async (req: Request, res: Response): Promise<any> => 
 export const createService = async (req: Request, res: Response): Promise<any> => {
   try {
     const user = (req as any).user;
+    const business = await Business.findById(user.businessId);
+    if (!business) return res.status(404).json({ message: 'Business not found' });
+    if (await isBusinessExpired(business)) {
+      return res.status(403).json({ message: 'Action blocked. Your subscription has expired. Please renew to continue.' });
+    }
+
     const { name, duration, price, description, isActive } = req.body;
     
     const service = new Service({
@@ -358,6 +383,12 @@ export const createService = async (req: Request, res: Response): Promise<any> =
 export const updateService = async (req: Request, res: Response): Promise<any> => {
   try {
     const user = (req as any).user;
+    const business = await Business.findById(user.businessId);
+    if (!business) return res.status(404).json({ message: 'Business not found' });
+    if (await isBusinessExpired(business)) {
+      return res.status(403).json({ message: 'Action blocked. Your subscription has expired. Please renew to continue.' });
+    }
+
     const service = await Service.findOneAndUpdate(
       { _id: req.params.id, businessId: user.businessId },
       req.body,
@@ -373,6 +404,12 @@ export const updateService = async (req: Request, res: Response): Promise<any> =
 export const deleteService = async (req: Request, res: Response): Promise<any> => {
   try {
     const user = (req as any).user;
+    const business = await Business.findById(user.businessId);
+    if (!business) return res.status(404).json({ message: 'Business not found' });
+    if (await isBusinessExpired(business)) {
+      return res.status(403).json({ message: 'Action blocked. Your subscription has expired. Please renew to continue.' });
+    }
+
     const service = await Service.findOneAndDelete({ _id: req.params.id, businessId: user.businessId });
     if (!service) return res.status(404).json({ message: 'Service not found' });
     res.json({ message: 'Service deleted successfully' });
@@ -384,7 +421,7 @@ export const deleteService = async (req: Request, res: Response): Promise<any> =
 export const updateBusinessPlan = async (req: Request, res: Response): Promise<any> => {
   try {
     const user = (req as any).user;
-    const { planId } = req.body;
+    const { planId, variantId } = req.body;
     
     if (!planId) {
       return res.status(400).json({ message: 'Plan ID is required' });
@@ -395,10 +432,13 @@ export const updateBusinessPlan = async (req: Request, res: Response): Promise<a
       return res.status(404).json({ message: 'Business not found' });
     }
 
-    business.planId = planId;
+    business.requestedPlanId = planId;
+    if (variantId) {
+      (business as any).requestedPlanVariantId = variantId;
+    }
     await business.save();
 
-    res.status(200).json({ message: 'Subscription plan updated successfully', planId });
+    res.status(200).json({ message: 'Plan upgrade requested! A payment link will be generated shortly.', planId });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }

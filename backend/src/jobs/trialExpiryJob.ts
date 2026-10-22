@@ -18,7 +18,28 @@ export const startTrialExpiryJob = () => {
         await biz.save();
         console.log(`[Cron] Trial expired for business: ${biz.name} (${biz._id})`);
       }
-      console.log(`[Cron] Successfully processed ${expiredBusinesses.length} expired trials.`);
+      if (expiredBusinesses.length > 0) {
+        console.log(`[Cron] Successfully processed ${expiredBusinesses.length} expired trials.`);
+      }
+
+      // Check for regular subscription expiry
+      const expiredSubscriptions = await Business.find({
+        subscriptionStatus: "active",
+        $or: [
+          { subscriptionEnd: { $lt: now } },
+          { planEndDate: { $lt: now } }
+        ]
+      });
+
+      for (const biz of expiredSubscriptions) {
+        biz.subscriptionStatus = "expired";
+        await biz.save();
+        console.log(`[Cron] Subscription expired for business: ${biz.name} (${biz._id})`);
+      }
+      if (expiredSubscriptions.length > 0) {
+        console.log(`[Cron] Successfully processed ${expiredSubscriptions.length} expired subscriptions.`);
+      }
+
     } catch (error) {
       console.error("[Cron] Error during trial expiry job:", error);
     }

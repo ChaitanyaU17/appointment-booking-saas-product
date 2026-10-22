@@ -8,48 +8,63 @@ import Appointment, { AppointmentStatus, AppointmentType } from '../models/Appoi
 import { generateToken, clearToken } from '../utils/jwt';
 
 export const register = async (req: Request, res: Response): Promise<any> => {
-  const { name, email, phone, password, businessName, category, registrationNumber, requestedPlanId } = req.body;
+  const { name, email, phone, password, businessName, category, registrationNumber, requestedPlanId, additionalNotes } = req.body;
 
   try {
-    const existingEmail = await User.findOne({ email });
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Name, email, and password are required' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const existingEmail = await User.findOne({ email: cleanEmail });
     if (existingEmail) {
       return res.status(400).json({ message: 'Email is already registered' });
     }
 
-    if (phone) {
-      const existingPhone = await User.findOne({ phone });
+    if (phone && phone.trim()) {
+      const existingPhone = await User.findOne({ phone: phone.trim() });
       if (existingPhone) {
-    
-          return res.status(400).json({ message: 'Phone number is already registered' });
+        return res.status(400).json({ message: 'Phone number is already registered' });
       }
     }
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const slug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    const finalBusinessName = (businessName || name).trim();
+    let baseSlug = finalBusinessName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)+/g, '');
 
+    if (!baseSlug) {
+      baseSlug = `user-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+
+    let slug = baseSlug;
     const existingBusiness = await Business.findOne({ slug });
     if (existingBusiness) {
-      return res.status(400).json({ message: 'Business name is already taken, please choose another' });
+      slug = `${baseSlug}-${Math.floor(1000 + Math.random() * 9000)}`;
     }
 
     const user = new User({
-      name,
-      email,
-      phone,
+      name: name.trim(),
+      email: cleanEmail,
+      phone: phone ? phone.trim() : undefined,
       password: hashedPassword,
       role: UserRole.BUSINESS_ADMIN
     });
 
     const business = new Business({
-      name: businessName,
+      name: finalBusinessName,
       slug,
-      category: category || 'N/A',
+      category: category || 'General',
       registrationNumber: registrationNumber || 'N/A',
-      email,
-      phone,
-      ownerName: name,
+      additionalNotes: additionalNotes || '',
+      description: additionalNotes || '',
+      email: cleanEmail,
+      phone: phone ? phone.trim() : 'N/A',
+      ownerName: name.trim(),
       verificationStatus: 'Pending',
       requestedPlanId: requestedPlanId || null,
       subscriptionStatus: 'trial'
@@ -76,12 +91,26 @@ export const register = async (req: Request, res: Response): Promise<any> => {
 };
 
 export const login = async (req: Request, res: Response): Promise<any> => {
-  const { email, password } = req.body;
+  const { email, password, role } = req.body;
 
   try {
     const user = await User.findOne({ email });
 
     if (user && user.password && (await bcrypt.compare(password, user.password))) {
+      // Enforce role isolation if a specific portal role is expected
+      if (role && user.role !== role) {
+        if (user.role === UserRole.AGENT && role === UserRole.BUSINESS_ADMIN) {
+          return res.status(403).json({ message: 'Agent accounts must log in via the Agent Portal (/agent/login)' });
+        }
+        if (user.role === UserRole.BUSINESS_ADMIN && role === UserRole.AGENT) {
+          return res.status(403).json({ message: 'Business accounts must log in via the Business Login page (/login)' });
+        }
+        if (role === UserRole.SUPERADMIN && user.role !== UserRole.SUPERADMIN) {
+          return res.status(403).json({ message: 'Access restricted: System administrators only' });
+        }
+        return res.status(403).json({ message: `Access denied. Account is not authorized for this portal.` });
+      }
+
       generateToken(res, user._id.toString());
       
       let verificationStatus = undefined;
@@ -96,8 +125,11 @@ export const login = async (req: Request, res: Response): Promise<any> => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         businessId: user.businessId,
+        permissions: user.permissions,
+        assignedBusinessIds: user.assignedBusinessIds,
         verificationStatus,
         isDemoAccount
       });
@@ -130,8 +162,11 @@ export const getMe = async (req: Request, res: Response): Promise<any> => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         businessId: user.businessId,
+        permissions: user.permissions,
+        assignedBusinessIds: user.assignedBusinessIds,
         verificationStatus,
         isDemoAccount
       });
