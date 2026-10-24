@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { showNotification } from '../features/notifications/notificationSlice';
 import Logo from '../components/common/Logo';
 import { useAppDispatch } from '../hook';
-import { loginThunk, googleLoginThunk } from '../features/auth/authSlice';
+import { loginThunk, googleLoginThunk, logoutThunk } from '../features/auth/authSlice';
 import DynamicForm from '../components/common/DynamicForm';
 
 export default function Login() {
@@ -44,7 +44,7 @@ export default function Login() {
             Business Login
           </Typography>
           <Typography variant="body1" color="textSecondary" sx={{ mb: 4 }}>
-            Welcome back! Please enter your details.
+            Welcome back! Please enter your details to access your shop dashboard.
           </Typography>
 
           <DynamicForm 
@@ -55,9 +55,20 @@ export default function Login() {
             initialValues={{ email: '', password: '' }}
             onSubmit={async (values) => {
               try {
-                const user = await dispatch(loginThunk(values)).unwrap();
+                const user = await dispatch(loginThunk({ ...values, role: 'BusinessAdmin' })).unwrap();
                 if (user.role !== 'BusinessAdmin') {
-                  dispatch(showNotification({ message: 'Unauthorized access', failure: true }));
+                  await dispatch(logoutThunk());
+                  if (user.role === 'Agent') {
+                    dispatch(showNotification({ 
+                      message: 'Agent accounts must log in via the Agent Portal (/agent/login).', 
+                      failure: true 
+                    }));
+                  } else {
+                    dispatch(showNotification({ 
+                      message: 'Unauthorized access. Only business owners can log in here.', 
+                      failure: true 
+                    }));
+                  }
                   return;
                 }
                 dispatch(showNotification({ message: 'Logged in successfully!' }));
@@ -116,6 +127,21 @@ export default function Login() {
                 Register your business here
               </Typography>
             </Typography>
+
+            <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #f1f5f9' }}>
+              <Typography variant="body2" color="textSecondary" sx={{ fontSize: '0.85rem' }}>
+                Are you an authorized field agent?{' '}
+                <Typography 
+                  component="span" 
+                  variant="body2" 
+                  color="primary" 
+                  sx={{ cursor: 'pointer', fontWeight: 600, textDecoration: 'none' }}
+                  onClick={() => navigate('/agent/login')}
+                >
+                  Agent Login
+                </Typography>
+              </Typography>
+            </Box>
           </Box>
         </Box>
       </Grid>

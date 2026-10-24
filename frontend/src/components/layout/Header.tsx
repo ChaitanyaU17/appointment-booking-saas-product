@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { AppBar, Toolbar, Typography, Button, IconButton, Box, Popover, Grid } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { AppBar, Toolbar, Typography, Button, IconButton, Box, Popover, Grid, Badge, Tooltip } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
+import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ExtensionIcon from '@mui/icons-material/Extension';
@@ -18,6 +19,7 @@ import type { RootState } from '../../app/store';
 import { logoutThunk } from '../../features/auth/authSlice';
 import { useAppDispatch } from '../../hook';
 import { showNotification } from '../../features/notifications/notificationSlice';
+import { fetchSuperadminNotifications } from '../../features/superadmin/superadminSlice';
 import Logo from '../common/Logo';
 
 interface HeaderProps {
@@ -46,6 +48,13 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const location = useLocation();
   const dispatch = useAppDispatch();
   const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
+  const unreadCount = useSelector((state: RootState) => state.superadmin?.unreadNotificationsCount || 0);
+
+  useEffect(() => {
+    if (user?.role === 'Superadmin') {
+      dispatch(fetchSuperadminNotifications({ page: 1, limit: 15 }));
+    }
+  }, [dispatch, user?.role]);
   
   const [anchorElProduct, setAnchorElProduct] = useState<null | HTMLElement>(null);
   const [anchorElSolutions, setAnchorElSolutions] = useState<null | HTMLElement>(null);
@@ -173,8 +182,49 @@ export default function Header({ onMenuClick }: HeaderProps) {
               </Box>
             )
           ) : (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              {user?.role === 'Superadmin' && (
+                <Tooltip title="Notifications & Push Alerts">
+                  <IconButton
+                    size="small"
+                    onClick={() => navigate('/superadmin/notifications')}
+                    sx={{
+                      color: location.pathname === '/superadmin/notifications' ? 'primary.main' : 'text.secondary',
+                      bgcolor: location.pathname === '/superadmin/notifications' ? 'rgba(101,146,135,0.12)' : '#f8fafc',
+                      border: '1px solid',
+                      borderColor: location.pathname === '/superadmin/notifications' ? 'primary.main' : '#e2e8f0',
+                      borderRadius: 2,
+                      width: 38,
+                      height: 38,
+                      transition: 'all 0.18s ease-in-out',
+                      '&:hover': {
+                        bgcolor: 'rgba(101,146,135,0.12)',
+                        color: 'primary.main',
+                        borderColor: 'primary.main'
+                      }
+                    }}
+                  >
+                    <Badge
+                      badgeContent={unreadCount}
+                      color="error"
+                      max={99}
+                      sx={{
+                        '& .MuiBadge-badge': {
+                          fontWeight: 800,
+                          fontSize: '0.65rem',
+                          height: 18,
+                          minWidth: 18,
+                          px: 0.5
+                        }
+                      }}
+                    >
+                      <NotificationsNoneIcon sx={{ fontSize: 20 }} />
+                    </Badge>
+                  </IconButton>
+                </Tooltip>
+              )}
+
+              <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' }, fontWeight: 500 }}>
                 {user?.name}
               </Typography>
               {!isDashboardPage && (

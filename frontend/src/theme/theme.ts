@@ -92,9 +92,14 @@ const theme = createTheme({
         root: {
           backgroundColor: '#659287',
           '& .MuiTableCell-head': {
+            backgroundColor: '#659287',
             color: '#ffffff',
             fontWeight: 700,
             borderRight: '1px solid rgba(255,255,255,0.15)',
+          },
+          '& .MuiTableCell-stickyHeader': {
+            backgroundColor: '#659287',
+            color: '#ffffff',
           },
         },
       },

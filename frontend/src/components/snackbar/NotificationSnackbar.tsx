@@ -23,7 +23,7 @@ export default function NotificationSnackbar() {
     if (open && message && message.trim().length > 0) {
       timer = setTimeout(() => {
         setShowSnackbar(true);
-      }, 500);
+      }, 50);
     } else {
       setShowSnackbar(false);
     }
@@ -64,7 +64,7 @@ export default function NotificationSnackbar() {
     <Snackbar
       anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       open={showSnackbar}
-      autoHideDuration={6000}
+      autoHideDuration={3000}
       onClose={handleClose}
       message={message}
       sx={{

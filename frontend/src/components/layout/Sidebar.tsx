@@ -14,6 +14,7 @@ import HowToRegIcon from '@mui/icons-material/HowToReg';
 import PeopleIcon from '@mui/icons-material/People';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 
 export const drawerWidth = 240;
 
@@ -31,6 +32,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
   const superadminLinks = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/superadmin' },
+    { text: 'Appointments', icon: <EventIcon />, path: '/superadmin/appointments' },
     { text: 'Registration', icon: <HowToRegIcon />, path: '/superadmin/registration' },
     { text: 'Onboarded Shops', icon: <StoreIcon />, path: '/superadmin/shops' },
     { text: 'Expired Shops', icon: <EventBusyIcon />, path: '/superadmin/expired-shops' },
@@ -40,6 +42,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
     { text: 'Coupons', icon: <LocalOfferIcon />, path: '/superadmin/coupons' },
     { text: 'Demo Requests', icon: <EventIcon />, path: '/superadmin/demo-requests' },
     { text: 'Payments', icon: <PaymentIcon />, path: '/superadmin/payments' },
+    { text: 'Notifications', icon: <NotificationsActiveIcon />, path: '/superadmin/notifications' },
   ];
 
   const businessLinks = [

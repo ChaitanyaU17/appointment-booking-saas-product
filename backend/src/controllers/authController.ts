@@ -6,9 +6,14 @@ import User, { UserRole } from '../models/User';
 import Business from '../models/Business';
 import Appointment, { AppointmentStatus, AppointmentType } from '../models/Appointment';
 import { generateToken, clearToken } from '../utils/jwt';
+import { createNotification } from '../utils/notificationService';
 
 export const register = async (req: Request, res: Response): Promise<any> => {
-  const { name, email, phone, password, businessName, category, registrationNumber, requestedPlanId, additionalNotes } = req.body;
+  const { name, email, phone, password, confirmPassword, businessName, category, registrationNumber, requestedPlanId, additionalNotes } = req.body;
+
+    if (password && confirmPassword && password !== confirmPassword) {
+      return res.status(400).json({ message: 'Passwords do not match' });
+    }
 
   try {
     if (!name || !email || !password) {
@@ -74,6 +79,19 @@ export const register = async (req: Request, res: Response): Promise<any> => {
 
     await business.save();
     await user.save();
+
+    await createNotification({
+      title: 'New Shop Registration',
+      message: `Shop "${business.name}" registered via public portal by ${user.name}.`,
+      type: 'registration',
+      recipientRole: 'Superadmin',
+      data: {
+        shopId: business._id,
+        shopName: business.name,
+        actionUrl: `/superadmin/registration?biz=${business._id}`,
+        stage: 'Demo Provisioning'
+      }
+    });
 
     generateToken(res, user._id.toString());
     res.status(201).json({

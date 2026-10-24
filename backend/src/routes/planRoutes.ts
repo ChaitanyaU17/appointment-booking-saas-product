@@ -8,21 +8,21 @@ import {
   togglePlanStatus
 } from '../controllers/planController';
 import { protect } from '../middlewares/authMiddleware';
-import { isSuperadmin } from '../middlewares/roleMiddleware';
+import { isSuperadmin, isSuperadminOrAgent } from '../middlewares/roleMiddleware';
 
 const router = express.Router();
 
-router.use(protect, isSuperadmin);
+router.use(protect);
 
 router.route('/')
-  .get(getPlans)
-  .post(createPlan);
+  .get(isSuperadminOrAgent, getPlans)
+  .post(isSuperadmin, createPlan);
 
 router.route('/:id')
-  .get(getPlanById)
-  .put(updatePlan)
-  .delete(deletePlan);
+  .get(isSuperadminOrAgent, getPlanById)
+  .put(isSuperadmin, updatePlan)
+  .delete(isSuperadmin, deletePlan);
 
-router.put('/:id/toggle', togglePlanStatus);
+router.put('/:id/toggle', isSuperadmin, togglePlanStatus);
 
 export default router;

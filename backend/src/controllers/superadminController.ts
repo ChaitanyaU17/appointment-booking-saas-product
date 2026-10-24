@@ -9,6 +9,8 @@ import Payment from '../models/Payment';
 import { sendPaymentLinkEmail, sendWelcomeCredentialsEmail } from '../utils/emailService';
 import Plan from '../models/Plan';
 import Service from '../models/Service';
+import Notification from '../models/Notification';
+import { backfillNotificationsIfEmpty, createNotification } from '../utils/notificationService';
 
 export const cleanupDemoSandbox = async (business: any) => {
   if (business.demoBusinessId) {
@@ -28,13 +30,62 @@ export const cleanupDemoSandbox = async (business: any) => {
 
 export const getDashboardStats = async (req: Request, res: Response): Promise<any> => {
   try {
-    const totalBusinesses = await Business.countDocuments();
-    const registeredShops = await Business.countDocuments({ verificationStatus: 'Approved' });
-    const pendingShops = await Business.countDocuments({ verificationStatus: { $in: ['Pending', 'ChangesRequested'] } });
+    const totalBusinesses = await Business.countDocuments({ isDemoAccount: { $ne: true } });
+    const registeredShops = await Business.countDocuments({ verificationStatus: 'Approved', isDemoAccount: { $ne: true } });
+    const pendingShops = await Business.countDocuments({ verificationStatus: { $in: ['Pending', 'ChangesRequested'] }, isDemoAccount: { $ne: true } });
+    const rejectedShops = await Business.countDocuments({ verificationStatus: 'Rejected', isDemoAccount: { $ne: true } });
     const totalAdmins = await User.countDocuments({ role: UserRole.BUSINESS_ADMIN });
     const totalAppointments = await Appointment.countDocuments();
-    const activeTrials = await Business.countDocuments({ trialStatus: 'Active' });
+    const activeTrials = await Business.countDocuments({ trialStatus: 'Active', isDemoAccount: { $ne: true } });
     const pendingDemoRequests = await DemoRequest.countDocuments({ status: 'Pending' });
+
+    const totalPaymentsCount = await Payment.countDocuments();
+    const successPaymentsCount = await Payment.countDocuments({ status: 'Success' });
+    const confirmedAppointments = await Appointment.countDocuments({ status: AppointmentStatus.CONFIRMED });
+    const completedAppointments = await Appointment.countDocuments({ status: AppointmentStatus.COMPLETED });
+    const pendingAppointments = await Appointment.countDocuments({ status: AppointmentStatus.PENDING });
+    const cancelledAppointments = await Appointment.countDocuments({ status: AppointmentStatus.CANCELLED });
+
+    // Agent registered shop metrics
+    const agentRegisteredTotal = await Business.countDocuments({
+      registeredByAgentId: { $ne: null },
+      isDemoAccount: { $ne: true }
+    });
+    const agentRegisteredPending = await Business.countDocuments({
+      registeredByAgentId: { $ne: null },
+      verificationStatus: { $in: ['Pending', 'ChangesRequested'] },
+      isDemoAccount: { $ne: true }
+    });
+    const agentRegisteredApproved = await Business.countDocuments({
+      registeredByAgentId: { $ne: null },
+      verificationStatus: 'Approved',
+      isDemoAccount: { $ne: true }
+    });
+
+    // Onboarding pipeline breakdown
+    const pendingFilter: any = { verificationStatus: { $in: ['Pending', 'ChangesRequested'] }, isDemoAccount: { $ne: true } };
+    const demoProvisioningCount = await Business.countDocuments({
+      ...pendingFilter,
+      $or: [{ demoStatus: 'None' }, { demoStatus: { $exists: false } }, { demoStatus: null }]
+    } as any);
+    const demoConductedCount = await Business.countDocuments({
+      ...pendingFilter,
+      demoStatus: 'Provided'
+    } as any);
+    const planSelectionCount = await Business.countDocuments({
+      ...pendingFilter,
+      demoStatus: 'Conducted',
+      planId: { $in: [null, undefined] },
+      paymentStatus: { $ne: 'Paid' }
+    } as any);
+    const verificationDecisionCount = await Business.countDocuments({
+      ...pendingFilter,
+      demoStatus: 'Conducted',
+      $or: [
+        { planId: { $ne: null } },
+        { paymentStatus: 'Paid' }
+      ]
+    } as any);
 
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
@@ -107,16 +158,25 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<an
       .sort({ createdAt: -1 })
       .limit(6);
 
-    const recentBusinesses = await Business.find().sort({ createdAt: -1 }).limit(5);
+    const recentBusinesses = await Business.find({ isDemoAccount: { $ne: true } }).populate('registeredByAgentId', 'name email phone').sort({ createdAt: -1 }).limit(6);
     const recentAdmins = await User.find({ role: UserRole.BUSINESS_ADMIN }).sort({ createdAt: -1 }).limit(5);
 
     const recentActivity = [
-      ...recentBusinesses.map(b => ({
-        id: b._id,
-        type: 'business',
-        message: `New business '${b.name}' created`,
-        date: (b as any).createdAt || new Date()
-      })),
+      ...recentBusinesses.map(b => {
+        const agent = b.registeredByAgentId as any;
+        const agentName = agent ? agent.name : null;
+        return {
+          id: b._id,
+          type: agentName ? 'agent_registration' : 'business',
+          message: agentName 
+            ? `Agent '${agentName}' registered shop '${b.name}'` 
+            : `New business '${b.name}' created`,
+          date: (b as any).createdAt || new Date(),
+          agentName: agentName || null,
+          businessName: b.name,
+          businessId: b._id
+        };
+      }),
       ...recentAdmins.map(a => ({
         id: a._id,
         type: 'admin',
@@ -135,9 +195,31 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<an
       totalBusinesses,
       registeredShops,
       pendingShops,
+      rejectedShops,
+      agentRegisteredStats: {
+        total: agentRegisteredTotal,
+        pending: agentRegisteredPending,
+        approved: agentRegisteredApproved
+      },
+      onboardingStages: {
+        demoProvisioning: demoProvisioningCount,
+        demoConducted: demoConductedCount,
+        planSelection: planSelectionCount,
+        verificationDecision: verificationDecisionCount
+      },
       pendingDemoRequests,
       totalAdmins,
       totalAppointments,
+      appointmentStats: {
+        confirmed: confirmedAppointments,
+        completed: completedAppointments,
+        pending: pendingAppointments,
+        cancelled: cancelledAppointments
+      },
+      paymentStats: {
+        total: totalPaymentsCount,
+        success: successPaymentsCount
+      },
       activeTrials,
       appointmentsToday,
       totalRevenue,
@@ -155,9 +237,11 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<an
 
 export const getBusinesses = async (req: Request, res: Response): Promise<any> => {
   try {
-    const businesses = await Business.find({})
+    const businesses = await Business.find({ isDemoAccount: { $ne: true } })
       .populate('planId', 'name slug price')
       .populate('requestedPlanId', 'name')
+      .populate('registeredByAgentId', 'name email phone')
+      .populate('assignedAgentId', 'name email phone')
       .lean();
     
     // Fetch all business admins to map owner names
@@ -278,6 +362,27 @@ export const updateBusiness = async (req: Request, res: Response): Promise<any> 
           business.trialStatus = "Converted";
           business.trialEndsAt = undefined;
           business.trialStartedAt = undefined;
+        }
+
+        if (req.body.planEndDate === undefined && req.body.subscriptionEnd === undefined) {
+          const planDoc = await Plan.findById(planId);
+          if (planDoc) {
+            const targetVariantId = req.body.planVariantId || business.planVariantId;
+            const variant = planDoc.variants?.find((v) => String(v._id) === String(targetVariantId)) || planDoc.variants?.[0];
+            const durationDays = variant?.durationDays || (planDoc as any).durationDays || 30;
+            const now = new Date();
+            business.planStartDate = now;
+            business.subscriptionStart = now;
+            if (variant?.billingCycle === 'one-time' || (planDoc as any).isPermanent) {
+              business.planEndDate = undefined;
+              business.subscriptionEnd = undefined;
+            } else {
+              const endDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+              business.planEndDate = endDate;
+              business.subscriptionEnd = endDate;
+            }
+            business.subscriptionStatus = 'active';
+          }
         }
       }
       if (verificationStatus) business.verificationStatus = verificationStatus;
@@ -514,6 +619,28 @@ export const approveBusiness = async (req: Request, res: Response): Promise<any>
     if (planVariantId) business.planVariantId = planVariantId;
     if (discountPercentage !== undefined) business.discountPercentage = discountPercentage;
 
+    const targetPlanId = planId || business.planId;
+    if (targetPlanId) {
+      const planDoc = await Plan.findById(targetPlanId);
+      if (planDoc) {
+        const targetVariantId = planVariantId || business.planVariantId;
+        const variant = planDoc.variants?.find((v) => String(v._id) === String(targetVariantId)) || planDoc.variants?.[0];
+        const durationDays = variant?.durationDays || (planDoc as any).durationDays || 30;
+        const now = new Date();
+        business.planStartDate = now;
+        business.subscriptionStart = now;
+        if (variant?.billingCycle === 'one-time' || (planDoc as any).isPermanent) {
+          business.planEndDate = undefined;
+          business.subscriptionEnd = undefined;
+        } else {
+          const endDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+          business.planEndDate = endDate;
+          business.subscriptionEnd = endDate;
+        }
+        business.subscriptionStatus = 'active';
+      }
+    }
+
     // Fix for legacy documents missing required fields
     if (!business.category) business.category = 'N/A';
     if (!business.registrationNumber) business.registrationNumber = 'N/A';
@@ -603,6 +730,11 @@ export const activateTrial = async (req: Request, res: Response): Promise<any> =
       business.trialStatus = "Converted";
       business.trialStartedAt = undefined;
       business.trialEndsAt = undefined;
+      business.planStartDate = new Date();
+      business.subscriptionStart = new Date();
+      business.planEndDate = undefined;
+      business.subscriptionEnd = undefined;
+      business.subscriptionStatus = 'active';
       await business.save();
       return res.json({ message: "Plan assigned permanently", business });
     }
@@ -618,6 +750,11 @@ export const activateTrial = async (req: Request, res: Response): Promise<any> =
     const endsAt = new Date();
     endsAt.setDate(endsAt.getDate() + Number(durationDays));
     business.trialEndsAt = endsAt;
+    business.planStartDate = business.trialStartedAt;
+    business.planEndDate = endsAt;
+    business.subscriptionStart = business.trialStartedAt;
+    business.subscriptionEnd = endsAt;
+    business.subscriptionStatus = 'trial';
 
     await business.save();
     res.json({ message: "Trial activated successfully", business });
@@ -926,7 +1063,7 @@ export const registerBusinessByAdmin = async (req: Request, res: Response): Prom
     const finalOwnerName = (name || ownerName || '').trim();
     const finalEmail = (email || ownerEmail || '').toLowerCase().trim();
     const finalPhone = (phone || ownerPhone || '').trim();
-    const finalBusinessName = (businessName || finalOwnerName).trim();
+    const finalBusinessName = (businessName || finalOwnerName || 'New Shop').trim();
 
     if (!finalOwnerName || !finalEmail) {
       return res.status(400).json({ message: 'Owner name and email are required' });
@@ -996,6 +1133,19 @@ export const registerBusinessByAdmin = async (req: Request, res: Response): Prom
         businessId: business._id
       });
       await user.save();
+
+      await createNotification({
+        title: 'New Shop Registration',
+        message: `Shop "${business.name}" registered by Superadmin.`,
+        type: 'registration',
+        recipientRole: 'Superadmin',
+        data: {
+          shopId: business._id,
+          shopName: business.name,
+          actionUrl: `/superadmin/registration?biz=${business._id}`,
+          stage: 'Demo Provisioning'
+        }
+      });
     } catch (userErr: any) {
       await Business.findByIdAndDelete(business._id);
       throw userErr;
@@ -1077,7 +1227,8 @@ export const getAgentById = async (req: Request, res: Response): Promise<any> =>
         { registeredByAgentId: agent._id },
         { assignedAgentId: agent._id },
         { _id: { $in: agent.assignedBusinessIds || [] } }
-      ]
+      ],
+      isDemoAccount: { $ne: true }
     })
       .populate('planId', 'name price')
       .sort({ createdAt: -1 });
@@ -1094,7 +1245,11 @@ export const getAgentById = async (req: Request, res: Response): Promise<any> =>
 
 export const createAgent = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { name, email, phone, password, permissions, assignedBusinessIds } = req.body;
+    const { name, email, phone, password, confirmPassword, permissions, assignedBusinessIds } = req.body;
+
+    if (confirmPassword && password !== confirmPassword) {
+      return res.status(400).json({ message: 'Passwords do not match' });
+    }
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required' });
@@ -1171,7 +1326,11 @@ export const createAgent = async (req: Request, res: Response): Promise<any> => 
 export const updateAgent = async (req: Request, res: Response): Promise<any> => {
   try {
     const { id } = req.params;
-    const { name, email, phone, password, permissions, assignedBusinessIds, isActive } = req.body;
+    const { name, email, phone, password, confirmPassword, permissions, assignedBusinessIds, isActive } = req.body;
+
+    if (password && confirmPassword && password !== confirmPassword) {
+      return res.status(400).json({ message: 'Passwords do not match' });
+    }
 
     const agent = await User.findOne({ _id: id, role: UserRole.AGENT });
     if (!agent) {
@@ -1263,7 +1422,8 @@ export const updateAgent = async (req: Request, res: Response): Promise<any> => 
         { registeredByAgentId: agent._id },
         { assignedAgentId: agent._id },
         { _id: { $in: agent.assignedBusinessIds || [] } }
-      ]
+      ],
+      isDemoAccount: { $ne: true }
     })
       .populate('planId', 'name price')
       .sort({ createdAt: -1 });
@@ -1297,5 +1457,136 @@ export const deleteAgent = async (req: Request, res: Response): Promise<any> => 
   } catch (error: any) {
     console.error('Error in deleteAgent:', error);
     res.status(500).json({ message: error?.message || 'Server error while deleting agent' });
+  }
+};
+
+export const getSuperadminAppointments = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { status, type, search } = req.query;
+    let query: any = {};
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+    if (type && type !== 'all') {
+      query.type = type;
+    }
+    if (search) {
+      const term = String(search).trim();
+      query.$or = [
+        { customerName: { $regex: term, $options: 'i' } },
+        { customerPhone: { $regex: term, $options: 'i' } },
+        { customerEmail: { $regex: term, $options: 'i' } },
+        { title: { $regex: term, $options: 'i' } }
+      ];
+    }
+    const appointments = await Appointment.find(query)
+      .populate('businessId', 'name slug ownerName phone email category')
+      .populate('serviceId', 'name price duration')
+      .sort({ startTime: -1, createdAt: -1 })
+      .limit(300);
+
+    const total = await Appointment.countDocuments();
+    const confirmedCount = await Appointment.countDocuments({ status: AppointmentStatus.CONFIRMED });
+    const pendingCount = await Appointment.countDocuments({ status: AppointmentStatus.PENDING });
+    const completedCount = await Appointment.countDocuments({ status: AppointmentStatus.COMPLETED });
+    const cancelledCount = await Appointment.countDocuments({ status: AppointmentStatus.CANCELLED });
+
+    res.json({
+      appointments,
+      total,
+      stats: {
+        confirmed: confirmedCount,
+        pending: pendingCount,
+        completed: completedCount,
+        cancelled: cancelledCount
+      }
+    });
+  } catch (error: any) {
+    console.error('Error fetching appointments for superadmin:', error);
+    res.status(500).json({ message: 'Server error fetching appointments' });
+  }
+};
+
+export const getSuperadminNotifications = async (req: Request, res: Response): Promise<any> => {
+  try {
+    await backfillNotificationsIfEmpty();
+
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit as string) || 15));
+    const type = req.query.type as string;
+    const search = req.query.search as string;
+
+    const query: any = { recipientRole: 'Superadmin' };
+
+    if (type && type !== 'all') {
+      query.type = type;
+    }
+
+    if (search && search.trim()) {
+      const term = search.trim();
+      query.$or = [
+        { title: { $regex: term, $options: 'i' } },
+        { message: { $regex: term, $options: 'i' } },
+        { 'data.shopName': { $regex: term, $options: 'i' } },
+        { 'data.agentName': { $regex: term, $options: 'i' } }
+      ];
+    }
+
+    const total = await Notification.countDocuments(query);
+    const unreadCount = await Notification.countDocuments({ recipientRole: 'Superadmin', read: false });
+
+    const notifications = await Notification.find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    const totalPages = Math.ceil(total / limit);
+    const hasMore = page < totalPages;
+
+    res.json({
+      notifications,
+      total,
+      page,
+      limit,
+      totalPages,
+      unreadCount,
+      hasMore
+    });
+  } catch (error: any) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ message: 'Server error fetching notifications', error: error.message });
+  }
+};
+
+export const markNotificationAsRead = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { id } = req.params;
+    const notification = await Notification.findByIdAndUpdate(id, { read: true }, { new: true });
+    if (!notification) return res.status(404).json({ message: 'Notification not found' });
+    const unreadCount = await Notification.countDocuments({ recipientRole: 'Superadmin', read: false });
+    res.json({ message: 'Marked as read', notification, unreadCount });
+  } catch (error: any) {
+    console.error('Error marking notification read:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const markAllNotificationsAsRead = async (req: Request, res: Response): Promise<any> => {
+  try {
+    await Notification.updateMany({ recipientRole: 'Superadmin', read: false }, { read: true });
+    res.json({ message: 'All notifications marked as read', unreadCount: 0 });
+  } catch (error: any) {
+    console.error('Error marking all notifications read:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const clearAllNotifications = async (req: Request, res: Response): Promise<any> => {
+  try {
+    await Notification.deleteMany({ recipientRole: 'Superadmin' });
+    res.json({ message: 'All notifications cleared', unreadCount: 0 });
+  } catch (error: any) {
+    console.error('Error clearing notifications:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
