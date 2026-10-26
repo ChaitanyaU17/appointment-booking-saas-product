@@ -2,9 +2,24 @@ import 'dotenv/config';
 import app from './app';
 import connectDB from './db';
 import User, { UserRole } from './models/User';
+import Business from './models/Business';
 import bcrypt from 'bcryptjs';
 
 const PORT = process.env.PORT || 5000;
+
+const repairEmptyShopNames = async () => {
+  try {
+    const emptyShops = await Business.find({
+      $or: [{ name: "" }, { name: null }, { name: { $exists: false } }]
+    });
+    for (const shop of emptyShops) {
+      shop.name = (shop.ownerName && shop.ownerName.trim()) || (shop.slug && shop.slug.trim()) || 'New Shop';
+      await shop.save();
+    }
+  } catch (err) {
+    console.error('Error repairing empty shop names:', err);
+  }
+};
 
 const bootstrapSuperadmin = async () => {
   try {
@@ -36,6 +51,7 @@ import { startTrialExpiryJob } from './jobs/trialExpiryJob';
 
 connectDB().then(async () => {
   await bootstrapSuperadmin();
+  await repairEmptyShopNames();
   startTrialExpiryJob();
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

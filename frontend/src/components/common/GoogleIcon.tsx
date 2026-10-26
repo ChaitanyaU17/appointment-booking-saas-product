@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import { SvgIcon, type SvgIconProps } from '@mui/material';
 
-export default function GoogleIcon(props: SvgIconProps) {
+const GoogleIcon = memo((props: SvgIconProps) => {
   return (
     <SvgIcon viewBox="0 0 48 48" {...props}>
       <path
@@ -27,4 +28,8 @@ export default function GoogleIcon(props: SvgIconProps) {
       />
     </SvgIcon>
   );
-}
+});
+
+GoogleIcon.displayName = 'GoogleIcon';
+
+export default GoogleIcon;

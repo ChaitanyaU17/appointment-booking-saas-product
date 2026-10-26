@@ -1,17 +1,25 @@
+import { memo } from 'react';
 import { TextField, InputAdornment } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import { fieldSx } from '../../theme/colors';
 
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  width?: number | string;
   minWidth?: number | string;
 }
 
-export default function SearchBar({ value, onChange, placeholder = 'Search...', minWidth = 250 }: SearchBarProps) {
+const SearchBar = memo(({
+  value,
+  onChange,
+  placeholder = 'Search...',
+  width = 240,
+  minWidth,
+}: SearchBarProps) => {
   return (
     <TextField
-      variant="outlined"
       size="small"
       placeholder={placeholder}
       value={value}
@@ -20,19 +28,20 @@ export default function SearchBar({ value, onChange, placeholder = 'Search...', 
         input: {
           startAdornment: (
             <InputAdornment position="start">
-              <SearchIcon color="action" fontSize="small" />
+              <SearchRoundedIcon sx={{ fontSize: 18, color: '#94a3b8' }} />
             </InputAdornment>
           ),
-          sx: { 
-            borderRadius: '50px', 
-            bgcolor: 'background.paper',
-            '& fieldset': {
-              borderColor: 'rgba(15, 23, 42, 0.12)',
-            },
-          }
-        }
+        },
       }}
-      sx={{ minWidth }}
+      sx={{
+        width: { xs: '100%', sm: width },
+        ...(minWidth ? { minWidth } : {}),
+        ...fieldSx,
+      }}
     />
   );
-}
+});
+
+SearchBar.displayName = 'SearchBar';
+
+export default SearchBar;

@@ -1,49 +1,41 @@
-import { useState } from 'react';
-import { Tooltip, IconButton, Dialog, DialogContent, DialogActions, Button, Typography } from '@mui/material';
+import { memo } from 'react';
+import { Tooltip, IconButton, type TooltipProps } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import InfoIcon from '@mui/icons-material/Info';
 
 interface InfoTooltipProps {
-  title: string;
+  title: TooltipProps['title'];
+  placement?: TooltipProps['placement'];
+  size?: 'small' | 'medium';
+  iconSize?: number;
+  color?: string;
 }
 
-export default function InfoTooltip({ title }: InfoTooltipProps) {
-  const [open, setOpen] = useState(false);
-
+const InfoTooltip = memo(({
+  title,
+  placement = 'top',
+  size = 'small',
+  iconSize = 16,
+  color = 'text.secondary'
+}: InfoTooltipProps) => {
   return (
-    <>
-      <Tooltip title={title} arrow placement="top">
-        <IconButton size="small" sx={{ ml: 0.5, color: 'text.secondary' }} onClick={(e) => { e.stopPropagation(); setOpen(true); }}>
-          <InfoOutlinedIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
-
-      <Dialog 
-        open={open} 
-        onClose={(e) => { 
-          if(e && (e as any).stopPropagation) (e as any).stopPropagation(); 
-          setOpen(false); 
-        }} 
-        maxWidth="xs" 
-        fullWidth
-        onClick={(e) => e.stopPropagation()}
+    <Tooltip title={title} placement={placement} arrow>
+      <IconButton
+        size={size}
+        sx={{
+          p: 0.5,
+          color,
+          '&:hover': {
+            color: 'primary.main',
+            bgcolor: 'action.hover'
+          }
+        }}
       >
-        <DialogContent sx={{ textAlign: 'center', py: 4 }}>
-          <InfoIcon color="primary" sx={{ fontSize: 48, mb: 2 }} />
-          <Typography variant="body1">
-            {title}
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
-          <Button 
-            variant="contained" 
-            onClick={(e) => { e.stopPropagation(); setOpen(false); }} 
-            color="primary"
-          >
-            OK, got it
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </>
+        <InfoOutlinedIcon sx={{ fontSize: iconSize }} />
+      </IconButton>
+    </Tooltip>
   );
-}
+});
+
+InfoTooltip.displayName = 'InfoTooltip';
+
+export default InfoTooltip;

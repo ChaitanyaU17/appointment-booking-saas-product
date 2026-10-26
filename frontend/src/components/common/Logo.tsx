@@ -1,6 +1,12 @@
+import { memo } from 'react';
 import { Box, Typography } from '@mui/material';
 
-export default function Logo({ size = 'medium', color = 'primary' }: { size?: 'small' | 'medium' | 'large', color?: 'primary' | 'white' }) {
+interface LogoProps {
+  size?: 'small' | 'medium' | 'large';
+  color?: 'primary' | 'white';
+}
+
+const Logo = memo(({ size = 'medium', color = 'primary' }: LogoProps) => {
   const iconSize = size === 'small' ? 24 : size === 'large' ? 48 : 32;
   const typographyVariant = size === 'small' ? 'h6' : size === 'large' ? 'h3' : 'h5';
   
@@ -20,4 +26,8 @@ export default function Logo({ size = 'medium', color = 'primary' }: { size?: 's
       </Typography>
     </Box>
   );
-}
+});
+
+Logo.displayName = 'Logo';
+
+export default Logo;

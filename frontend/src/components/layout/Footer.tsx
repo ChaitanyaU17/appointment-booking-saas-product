@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import { Box, Typography, Container, Grid, Link, TextField, Button, Divider } from '@mui/material';
 
-export default function Footer() {
+const Footer = memo(() => {
   return (
     <Box component="footer" sx={{ bgcolor: '#0f172a', color: 'white', pt: 8, pb: 4, mt: 'auto' }}>
       <Container maxWidth="lg">
@@ -91,4 +92,8 @@ export default function Footer() {
       </Container>
     </Box>
   );
-}
+});
+
+Footer.displayName = 'Footer';
+
+export default Footer;

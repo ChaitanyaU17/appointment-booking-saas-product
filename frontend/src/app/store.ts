@@ -7,6 +7,7 @@ import businessReducer from '../features/business/businessSlice';
 import customerReducer from '../features/customer/customerSlice';
 import publicReducer from '../features/public/publicSlice';
 import notificationReducer from '../features/notifications/notificationSlice';
+import agentReducer from '../features/agent/agentSlice';
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     appointments: appointmentsReducer,
     superadmin: superadminReducer,
     coupons: couponReducer,
+    agent: agentReducer,
     business: businessReducer,
     customer: customerReducer,
     public: publicReducer,

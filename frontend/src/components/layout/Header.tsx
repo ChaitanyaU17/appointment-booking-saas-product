@@ -53,6 +53,29 @@ export default function Header({ onMenuClick }: HeaderProps) {
   useEffect(() => {
     if (user?.role === 'Superadmin') {
       dispatch(fetchSuperadminNotifications({ page: 1, limit: 15 }));
+
+      // Listen for instant registration events to refresh unread count
+      let broadcastChannel: BroadcastChannel | null = null;
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        broadcastChannel = new BroadcastChannel('slotify_registrations');
+        broadcastChannel.onmessage = (e) => {
+          if (e.data?.type === 'SHOP_REGISTERED') {
+            dispatch(fetchSuperadminNotifications({ page: 1, limit: 15 }));
+          }
+        };
+      }
+
+      const handleStorage = (e: StorageEvent) => {
+        if (e.key === 'slotify_last_registration') {
+          dispatch(fetchSuperadminNotifications({ page: 1, limit: 15 }));
+        }
+      };
+      window.addEventListener('storage', handleStorage);
+
+      return () => {
+        window.removeEventListener('storage', handleStorage);
+        if (broadcastChannel) broadcastChannel.close();
+      };
     }
   }, [dispatch, user?.role]);
   
