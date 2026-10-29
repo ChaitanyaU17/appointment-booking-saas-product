@@ -1,12 +1,16 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { 
   fetchSuperadminDashboardApi, fetchBusinessesApi, fetchPaymentsApi, createBusinessApi, updateBusinessApi, deleteBusinessApi,
+  registerBusinessByAdminApi,
   fetchAdminsApi, createAdminApi, updateAdminApi, deleteAdminApi,
   approveBusinessApi, rejectBusinessApi, requestChangesBusinessApi,
   activateTrialApi,
   createDemoForRegistrationApi, markDemoConductedApi,
   fetchDemoRequestsApi, approveDemoRequestApi, rejectDemoRequestApi, deleteDemoRequestApi,
-  generatePaymentLinkApi
+  generatePaymentLinkApi,
+  fetchAgentsApi, fetchAgentByIdApi, createAgentApi, updateAgentApi, deleteAgentApi,
+  fetchSuperadminAppointmentsApi,
+  fetchSuperadminNotificationsApi, markNotificationReadApi, markAllNotificationsReadApi, clearNotificationsApi
 } from "./superadminApi";
 import {
   fetchPlansApi, createPlanApi, updatePlanApi, deletePlanApi, togglePlanApi
@@ -28,6 +32,12 @@ interface ISuperadminState {
   adminsLoading: boolean;
   adminsError: any;
 
+  agents: any[];
+  agentsLoading: boolean;
+  agentsError: any;
+  currentAgent: any;
+  currentAgentLoading: boolean;
+
   plans: any[];
   plansLoading: boolean;
   plansError: any;
@@ -35,6 +45,18 @@ interface ISuperadminState {
   demoRequests: any[];
   demoRequestsLoading: boolean;
   demoRequestsError: any;
+
+  appointments: any[];
+  appointmentsLoading: boolean;
+  appointmentsError: any;
+  appointmentsTotal: number;
+  appointmentsStats: any;
+
+  notifications: any[];
+  notificationsTotal: number;
+  unreadNotificationsCount: number;
+  notificationsLoading: boolean;
+  notificationsHasMore: boolean;
 }
 
 const initialState: ISuperadminState = {
@@ -42,6 +64,12 @@ const initialState: ISuperadminState = {
   dashboardLoading: false,
   dashboardError: null,
   
+  notifications: [],
+  notificationsTotal: 0,
+  unreadNotificationsCount: 0,
+  notificationsLoading: false,
+  notificationsHasMore: false,
+
   businesses: [],
   payments: [],
   paymentsLoading: false,
@@ -53,6 +81,12 @@ const initialState: ISuperadminState = {
   adminsLoading: false,
   adminsError: null,
 
+  agents: [],
+  agentsLoading: false,
+  agentsError: null,
+  currentAgent: null,
+  currentAgentLoading: false,
+
   plans: [],
   plansLoading: false,
   plansError: null,
@@ -60,6 +94,12 @@ const initialState: ISuperadminState = {
   demoRequests: [],
   demoRequestsLoading: false,
   demoRequestsError: null,
+
+  appointments: [],
+  appointmentsLoading: false,
+  appointmentsError: null,
+  appointmentsTotal: 0,
+  appointmentsStats: null,
 };
 
 
@@ -103,6 +143,18 @@ export const createBusiness = createAsyncThunk(
   async (data: any, { rejectWithValue }) => {
     try {
       const response = await createBusinessApi(data);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const registerBusinessByAdmin = createAsyncThunk(
+  'superadmin/registerBusinessByAdmin',
+  async (data: any, { rejectWithValue }) => {
+    try {
+      const response = await registerBusinessByAdminApi(data);
       return response;
     } catch (error: any) {
       return rejectWithValue(error?.response?.data?.message || error?.message);
@@ -263,6 +315,126 @@ export const deleteAdmin = createAsyncThunk(
   }
 );
 
+export const fetchAgents = createAsyncThunk(
+  'superadmin/fetchAgents',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await fetchAgentsApi();
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const fetchAgentById = createAsyncThunk(
+  'superadmin/fetchAgentById',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await fetchAgentByIdApi(id);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const createAgent = createAsyncThunk(
+  'superadmin/createAgent',
+  async (data: any, { rejectWithValue }) => {
+    try {
+      const response = await createAgentApi(data);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const updateAgent = createAsyncThunk(
+  'superadmin/updateAgent',
+  async ({ id, data }: { id: string; data: any }, { rejectWithValue }) => {
+    try {
+      const response = await updateAgentApi(id, data);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const deleteAgent = createAsyncThunk(
+  'superadmin/deleteAgent',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      await deleteAgentApi(id);
+      return id;
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const fetchSuperadminAppointments = createAsyncThunk(
+  'superadmin/fetchAppointments',
+  async (params: any = {}, { rejectWithValue }) => {
+    try {
+      const response = await fetchSuperadminAppointmentsApi(params);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const fetchSuperadminNotifications = createAsyncThunk(
+  'superadmin/fetchNotifications',
+  async (params: any = {}, { rejectWithValue }) => {
+    try {
+      const response = await fetchSuperadminNotificationsApi(params);
+      return { ...response, append: params.page > 1 };
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const markNotificationAsRead = createAsyncThunk(
+  'superadmin/markNotificationAsRead',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await markNotificationReadApi(id);
+      return { id, ...response };
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const markAllNotificationsAsRead = createAsyncThunk(
+  'superadmin/markAllNotificationsAsRead',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await markAllNotificationsReadApi();
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
+export const clearAllNotifications = createAsyncThunk(
+  'superadmin/clearAllNotifications',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await clearNotificationsApi();
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error?.message);
+    }
+  }
+);
+
 export const fetchPlans = createAsyncThunk(
   'superadmin/fetchPlans',
   async (_, { rejectWithValue }) => {
@@ -380,7 +552,9 @@ const superadminSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchSuperadminDashboard.pending, (state) => {
-        state.dashboardLoading = true;
+        if (!state.dashboardData) {
+          state.dashboardLoading = true;
+        }
         state.dashboardError = null;
       })
       .addCase(fetchSuperadminDashboard.fulfilled, (state, action) => {
@@ -405,7 +579,9 @@ const superadminSlice = createSlice({
         state.paymentsError = action.payload as string;
       })
 .addCase(fetchBusinesses.pending, (state) => {
-        state.businessesLoading = true;
+        if (!state.businesses || state.businesses.length === 0) {
+          state.businessesLoading = true;
+        }
       })
       .addCase(fetchBusinesses.fulfilled, (state, action) => {
         state.businessesLoading = false;
@@ -414,6 +590,14 @@ const superadminSlice = createSlice({
       .addCase(fetchBusinesses.rejected, (state, action) => {
         state.businessesLoading = false;
         state.businessesError = action.payload;
+      })
+      .addCase(registerBusinessByAdmin.fulfilled, (state, action) => {
+        if (action.payload?.business) {
+          state.businesses.unshift(action.payload.business);
+        }
+        if (action.payload?.user) {
+          state.admins.unshift(action.payload.user);
+        }
       })
 
       .addCase(fetchAdmins.pending, (state) => {
@@ -426,6 +610,22 @@ const superadminSlice = createSlice({
       .addCase(fetchAdmins.rejected, (state, action) => {
         state.adminsLoading = false;
         state.adminsError = action.payload;
+      })
+      .addCase(createAdmin.fulfilled, (state, action) => {
+        if (action.payload) {
+          state.admins.unshift(action.payload);
+        }
+      })
+      .addCase(updateAdmin.fulfilled, (state, action) => {
+        if (action.payload) {
+          const index = state.admins.findIndex((a: any) => (a._id || a.id) === (action.payload._id || action.payload.id));
+          if (index !== -1) {
+            state.admins[index] = action.payload;
+          }
+        }
+      })
+      .addCase(deleteAdmin.fulfilled, (state, action) => {
+        state.admins = state.admins.filter((a: any) => (a._id || a.id) !== action.meta.arg);
       })
 
       .addCase(fetchPlans.pending, (state) => {
@@ -465,6 +665,107 @@ const superadminSlice = createSlice({
       .addCase(fetchDemoRequests.rejected, (state, action) => {
         state.demoRequestsLoading = false;
         state.demoRequestsError = action.payload;
+      })
+
+      // Agents
+      .addCase(fetchAgents.pending, (state) => {
+        state.agentsLoading = true;
+        state.agentsError = null;
+      })
+      .addCase(fetchAgents.fulfilled, (state, action) => {
+        state.agentsLoading = false;
+        state.agents = action.payload;
+      })
+      .addCase(fetchAgents.rejected, (state, action) => {
+        state.agentsLoading = false;
+        state.agentsError = action.payload;
+      })
+      .addCase(fetchAgentById.pending, (state) => {
+        state.currentAgentLoading = true;
+      })
+      .addCase(fetchAgentById.fulfilled, (state, action) => {
+        state.currentAgentLoading = false;
+        state.currentAgent = action.payload;
+      })
+      .addCase(fetchAgentById.rejected, (state) => {
+        state.currentAgentLoading = false;
+      })
+      .addCase(createAgent.fulfilled, (state, action) => {
+        state.agents.unshift(action.payload);
+      })
+      .addCase(updateAgent.fulfilled, (state, action) => {
+        const idx = state.agents.findIndex((a: any) => a._id === action.payload._id);
+        if (idx !== -1) {
+          state.agents[idx] = action.payload;
+        }
+        if (state.currentAgent?._id === action.payload._id) {
+          state.currentAgent = action.payload;
+        }
+      })
+      .addCase(deleteAgent.fulfilled, (state, action) => {
+        state.agents = state.agents.filter((a: any) => a._id !== action.payload);
+      })
+      // Appointments
+      .addCase(fetchSuperadminAppointments.pending, (state) => {
+        if (!state.appointments || state.appointments.length === 0) {
+          state.appointmentsLoading = true;
+        }
+        state.appointmentsError = null;
+      })
+      .addCase(fetchSuperadminAppointments.fulfilled, (state, action) => {
+        state.appointmentsLoading = false;
+        state.appointments = action.payload?.appointments || [];
+        state.appointmentsTotal = action.payload?.total || 0;
+        state.appointmentsStats = action.payload?.stats || null;
+      })
+      .addCase(fetchSuperadminAppointments.rejected, (state, action) => {
+        state.appointmentsLoading = false;
+        state.appointmentsError = action.payload;
+      })
+      // Notifications
+      .addCase(fetchSuperadminNotifications.pending, (state, action) => {
+        if (!action.meta.arg?.page || action.meta.arg.page === 1) {
+          state.notificationsLoading = true;
+        }
+      })
+      .addCase(fetchSuperadminNotifications.fulfilled, (state, action) => {
+        state.notificationsLoading = false;
+        const newItems = action.payload?.notifications || [];
+        if (action.payload?.append) {
+          // Append unique notifications
+          const existingIds = new Set(state.notifications.map((n: any) => n._id));
+          const toAdd = newItems.filter((n: any) => !existingIds.has(n._id));
+          state.notifications = [...state.notifications, ...toAdd];
+        } else {
+          state.notifications = newItems;
+        }
+        state.notificationsTotal = action.payload?.total || 0;
+        state.unreadNotificationsCount = action.payload?.unreadCount || 0;
+        state.notificationsHasMore = !!action.payload?.hasMore;
+      })
+      .addCase(fetchSuperadminNotifications.rejected, (state) => {
+        state.notificationsLoading = false;
+      })
+      .addCase(markNotificationAsRead.fulfilled, (state, action) => {
+        const id = action.payload?.id;
+        state.notifications = state.notifications.map((n: any) =>
+          n._id === id ? { ...n, read: true } : n
+        );
+        if (action.payload?.unreadCount !== undefined) {
+          state.unreadNotificationsCount = action.payload.unreadCount;
+        } else {
+          state.unreadNotificationsCount = Math.max(0, state.unreadNotificationsCount - 1);
+        }
+      })
+      .addCase(markAllNotificationsAsRead.fulfilled, (state) => {
+        state.notifications = state.notifications.map((n: any) => ({ ...n, read: true }));
+        state.unreadNotificationsCount = 0;
+      })
+      .addCase(clearAllNotifications.fulfilled, (state) => {
+        state.notifications = [];
+        state.notificationsTotal = 0;
+        state.unreadNotificationsCount = 0;
+        state.notificationsHasMore = false;
       });
   }
 });

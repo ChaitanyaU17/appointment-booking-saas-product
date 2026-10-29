@@ -15,6 +15,7 @@ import { motion } from 'framer-motion';
 import { useAppDispatch } from '../hook';
 import { registerThunk } from '../features/auth/authSlice';
 import { showNotification } from '../features/notifications/notificationSlice';
+import { notifyRegistrationEvent } from '../utils/registrationEvents';
 import Logo from '../components/common/Logo';
 import registerImg from '../assets/meet-register.png';
 
@@ -78,6 +79,7 @@ export default function Register() {
     onSubmit: async (values) => {
       try {
         await dispatch(registerThunk(values)).unwrap();
+        notifyRegistrationEvent();
         dispatch(showNotification({ message: 'Registration successful! Welcome to Slotify.' }));
         navigate('/business');
       } catch (error: any) {

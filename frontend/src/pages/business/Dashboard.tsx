@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton, Box, Card, Typography, Grid, Alert, IconButton, Divider, Chip, List, ListItem, ListItemText, ListItemAvatar, Button } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
@@ -22,7 +22,7 @@ import InfoTooltip from '../../components/common/InfoTooltip';
 
 const COLORS = ['#659287', '#B1D3B9', '#88BDA4', '#4a6b62'];
 
-const MiniChart = ({ color }: { color: string }) => {
+const MiniChart = memo(({ color }: { color: string }) => {
   const totalBars = 35;
   const fillCount = (color.charCodeAt(1) * 3) % totalBars || 18;
   const bars = Array.from({ length: totalBars });
@@ -37,9 +37,10 @@ const MiniChart = ({ color }: { color: string }) => {
       ))}
     </Box>
   );
-};
+});
+MiniChart.displayName = 'MiniChart';
 
-const KpiCard = ({ title, value, icon, trend = 15.2, trendUp = true, color = '#659287', loading }: any) => {
+const KpiCard = memo(({ title, value, icon, trend = 15.2, trendUp = true, color = '#659287', loading }: any) => {
   if (loading) return <Skeleton variant="rounded" height={180} sx={{ borderRadius: 4 }} />;
 
   return (
@@ -80,7 +81,8 @@ const KpiCard = ({ title, value, icon, trend = 15.2, trendUp = true, color = '#6
       </Typography>
     </Card>
   );
-};
+});
+KpiCard.displayName = 'KpiCard';
 
 export default function BusinessDashboard() {
   const dispatch = useAppDispatch();

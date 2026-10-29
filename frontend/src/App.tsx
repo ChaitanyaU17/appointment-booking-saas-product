@@ -33,6 +33,10 @@ const CouponForm = lazy(() => import('./pages/superadmin/CouponForm'));
 const PlanForm = lazy(() => import('./pages/superadmin/PlanForm'));
 const DemoRequests = lazy(() => import('./pages/superadmin/DemoRequests'));
 const Payments = lazy(() => import('./pages/superadmin/Payments'));
+const SuperadminAppointments = lazy(() => import('./pages/superadmin/Appointments'));
+const RegisteredShops = lazy(() => import('./pages/superadmin/RegisteredShops'));
+const OnboardingStages = lazy(() => import('./pages/superadmin/OnboardingStages'));
+const NotificationsPage = lazy(() => import('./pages/superadmin/Notifications'));
 const Agents = lazy(() => import('./pages/superadmin/Agents'));
 const AgentDetails = lazy(() => import('./pages/superadmin/AgentDetails'));
 const AgentForm = lazy(() => import('./pages/superadmin/AgentForm'));
@@ -105,6 +109,10 @@ const router = createBrowserRouter([
       { path: "plan-edit/:id", element: <Suspense fallback={<LoadingFallback />}><PlanForm /></Suspense> },
       { path: "demo-requests", element: <Suspense fallback={<LoadingFallback />}><DemoRequests /></Suspense> },
       { path: "payments", element: <Suspense fallback={<LoadingFallback />}><Payments /></Suspense> },
+      { path: "appointments", element: <Suspense fallback={<LoadingFallback />}><SuperadminAppointments /></Suspense> },
+      { path: "registered-shops", element: <Suspense fallback={<LoadingFallback />}><RegisteredShops /></Suspense> },
+      { path: "onboarding-stages", element: <Suspense fallback={<LoadingFallback />}><OnboardingStages /></Suspense> },
+      { path: "notifications", element: <Suspense fallback={<LoadingFallback />}><NotificationsPage /></Suspense> },
     ]
   },
   {

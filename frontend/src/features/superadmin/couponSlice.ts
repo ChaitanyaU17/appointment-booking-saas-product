@@ -1,11 +1,24 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../services/api';
 
+const isAgentRole = () => {
+  try {
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/agent')) {
+      return true;
+    }
+    const u = JSON.parse(localStorage.getItem('user') || '{}');
+    return u?.role === 'Agent';
+  } catch {
+    return false;
+  }
+};
+
 const API_URL = '/superadmin/coupons';
 
 export const fetchCoupons = createAsyncThunk('coupons/fetchCoupons', async (_, { rejectWithValue }) => {
   try {
-    const response = await api.get(API_URL);
+    const endpoint = isAgentRole() ? '/agent/coupons' : API_URL;
+    const response = await api.get(endpoint);
     return response.data;
   } catch (error: any) {
     return rejectWithValue(error.response?.data?.message || 'Failed to fetch coupons');

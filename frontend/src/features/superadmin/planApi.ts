@@ -1,6 +1,22 @@
 import api from '../../services/api';
 
+const isAgentRole = () => {
+  try {
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/agent')) {
+      return true;
+    }
+    const u = JSON.parse(localStorage.getItem('user') || '{}');
+    return u?.role === 'Agent';
+  } catch {
+    return false;
+  }
+};
+
 export const fetchPlansApi = async (): Promise<any> => {
+  if (isAgentRole()) {
+    const response = await api.get('/agent/plans');
+    return response.data;
+  }
   const response = await api.get('/superadmin/plans');
   return response.data;
 };

@@ -2,7 +2,7 @@ import { Box, Typography, Grid } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { showNotification } from '../../features/notifications/notificationSlice';
 import { useAppDispatch } from '../../hook';
-import { loginThunk } from '../../features/auth/authSlice';
+import { loginThunk, logoutThunk } from '../../features/auth/authSlice';
 import DynamicForm from '../../components/common/DynamicForm';
 import Logo from '../../components/common/Logo';
 
@@ -41,9 +41,10 @@ export default function SuperadminLogin() {
             initialValues={{ email: '', password: '' }}
             onSubmit={async (values) => {
               try {
-                const user = await dispatch(loginThunk(values)).unwrap();
+                const user = await dispatch(loginThunk({ ...values, role: 'Superadmin' })).unwrap();
                 if (user.role !== 'Superadmin') {
-                  dispatch(showNotification({ message: 'Unauthorized access', failure: true }));
+                  await dispatch(logoutThunk());
+                  dispatch(showNotification({ message: 'Unauthorized access. System administrators only.', failure: true }));
                   return;
                 }
                 dispatch(showNotification({ message: 'Logged in successfully!' }));

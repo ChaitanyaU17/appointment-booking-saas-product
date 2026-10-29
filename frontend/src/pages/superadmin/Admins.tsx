@@ -22,6 +22,7 @@ const Admins = () => {
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [editAdminId, setEditAdminId] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
@@ -46,11 +47,16 @@ const Admins = () => {
   }));
 
   const adminFormik = useFormik({
-    initialValues: { name: '', email: '', password: '', businessId: '' },
+    initialValues: { name: '', email: '', password: '', confirmPassword: '', businessId: '' },
     validationSchema: Yup.object({
       name: Yup.string().required('Name is required'),
       email: Yup.string().email('Invalid email').required('Email is required'),
-      password: editAdminId ? Yup.string() : Yup.string().required('Password is required'),
+      password: editAdminId ? Yup.string() : Yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
+      confirmPassword: Yup.string().when('password', {
+        is: (val: string) => Boolean(val && val.length > 0),
+        then: () => Yup.string().oneOf([Yup.ref('password')], 'Passwords must match').required('Confirm password is required'),
+        otherwise: () => Yup.string().optional()
+      }),
       businessId: Yup.string().required('Must assign to a business'),
     }),
     onSubmit: (values) => {
@@ -75,6 +81,7 @@ const Admins = () => {
         name: admin.name,
         email: admin.email,
         password: '',
+        confirmPassword: '',
         businessId: admin.businessId?._id || admin.businessId || ''
       });
     } else {
@@ -205,6 +212,23 @@ const Admins = () => {
                     <InputAdornment position="end">
                       <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
                         {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }
+              }}
+            />
+            <TextField
+              fullWidth margin="normal" name="confirmPassword" label={editAdminId ? "Confirm New Password" : "Confirm Password"} type={showConfirmPassword ? 'text' : 'password'}
+              value={adminFormik.values.confirmPassword} onChange={adminFormik.handleChange}
+              error={adminFormik.touched.confirmPassword && Boolean(adminFormik.errors.confirmPassword)}
+              helperText={adminFormik.touched.confirmPassword && adminFormik.errors.confirmPassword as string}
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} edge="end">
+                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
                     </InputAdornment>
                   ),

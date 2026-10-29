@@ -37,7 +37,10 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<an
     const totalAdmins = await User.countDocuments({ role: UserRole.BUSINESS_ADMIN });
     const totalAppointments = await Appointment.countDocuments();
     const activeTrials = await Business.countDocuments({ trialStatus: 'Active', isDemoAccount: { $ne: true } });
+    const totalDemoRequests = await DemoRequest.countDocuments();
     const pendingDemoRequests = await DemoRequest.countDocuments({ status: 'Pending' });
+    const approvedDemoRequests = await DemoRequest.countDocuments({ status: 'Approved' });
+    const rejectedDemoRequests = await DemoRequest.countDocuments({ status: 'Rejected' });
 
     const totalPaymentsCount = await Payment.countDocuments();
     const successPaymentsCount = await Payment.countDocuments({ status: 'Success' });
@@ -208,6 +211,12 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<an
         verificationDecision: verificationDecisionCount
       },
       pendingDemoRequests,
+      demoRequestStats: {
+        total: totalDemoRequests,
+        pending: pendingDemoRequests,
+        approved: approvedDemoRequests,
+        rejected: rejectedDemoRequests
+      },
       totalAdmins,
       totalAppointments,
       appointmentStats: {
