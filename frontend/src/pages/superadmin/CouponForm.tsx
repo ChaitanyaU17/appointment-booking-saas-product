@@ -16,16 +16,7 @@ import PercentRoundedIcon from '@mui/icons-material/PercentRounded';
 import CurrencyRupeeRoundedIcon from '@mui/icons-material/CurrencyRupeeRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 
-const ACCENT = '#659287';
-const ACCENT_DARK = '#4a6b62';
-const ACCENT_SOFT = alpha(ACCENT, 0.08);
-const ACCENT_BORDER = alpha(ACCENT, 0.25);
-
-const SURFACE = '#ffffff';
-const PAGE_BG = '#f6f8f7';
-const BORDER = '#e6e9ef';
-const MUTED = '#64748b';
-const INK = '#0f172a';
+import { ACCENT, ACCENT_DARK, ACCENT_SOFT, ACCENT_BORDER, SURFACE, PAGE_BG, BORDER, MUTED, INK } from '../../theme/colors';
 
 const SectionHeader = ({ title, caption }: { title: string; caption?: string }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>

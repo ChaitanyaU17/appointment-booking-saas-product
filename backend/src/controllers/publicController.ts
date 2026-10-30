@@ -9,7 +9,6 @@ import { isBusinessExpired } from '../utils/businessUtils';
 import Service from '../models/Service';
 import Plan from '../models/Plan';
 
-
 export const getPublicPlans = async (req: Request, res: Response): Promise<any> => {
   try {
     const plans = await Plan.find({ isPublic: true }).select('-createdAt -updatedAt').sort({ displayOrder: 1 });
