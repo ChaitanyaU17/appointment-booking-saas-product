@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box, Typography, Button, TextField, MenuItem, IconButton, Switch,
   Grid, Stack, Card, CardContent, alpha,
@@ -27,16 +27,7 @@ import { useAppDispatch, useAppSelector } from '../../hook';
 import { createPlan, updatePlan, fetchPlans } from '../../features/superadmin/superadminSlice';
 import { showNotification } from '../../features/notifications/notificationSlice';
 
-const ACCENT = '#659287';
-const ACCENT_DARK = '#4a6b62';
-const ACCENT_SOFT = alpha(ACCENT, 0.08);
-const ACCENT_BORDER = alpha(ACCENT, 0.25);
-
-const SURFACE = '#ffffff';
-const PAGE_BG = '#f6f8f7';
-const BORDER = '#e6e9ef';
-const MUTED = '#64748b';
-const INK = '#0f172a';
+import { ACCENT, ACCENT_DARK, ACCENT_SOFT, ACCENT_BORDER, SURFACE, PAGE_BG, BORDER, MUTED, INK } from '../../theme/colors';
 
 const FEATURE_ICONS: Record<string, React.ReactNode> = {
   'Google Calendar Sync': <CalendarMonthRoundedIcon sx={{ fontSize: 16 }} />,
@@ -149,14 +140,44 @@ export default function PlanForm() {
       oneTimeFee: Yup.number().min(0, 'Minimum 0'),
       gstSettings: Yup.object({ type: Yup.string().oneOf(['inclusive', 'exclusive']).required(), rate: Yup.number().min(0).max(100).required() }),
       planLimits: Yup.object({ maxBookingsPerMonth: Yup.number().min(1).required('Required'), maxServices: Yup.number().min(1).required('Required'), maxAdmins: Yup.number().min(1).required('Required') }),
+      variants: Yup.array().of(
+        Yup.object({
+          name: Yup.string().trim().required('Variant title is required'),
+          billingCycle: Yup.string().oneOf(['monthly', 'quarterly', 'half-yearly', 'yearly', 'one-time']).required('Cycle is required'),
+          durationDays: Yup.number().typeError('Must be a number').min(1, 'Min 1 day').required('Required'),
+          price: Yup.number().typeError('Must be a number').min(0, 'Min 0').required('Required')
+        })
+      )
     }),
     onSubmit: async (values) => {
       try {
+        const payload = {
+          ...values,
+          name: values.name.trim(),
+          slug: values.slug.trim().toLowerCase(),
+          numberOfShops: Number(values.numberOfShops) || 1,
+          numberOfUsers: Number(values.numberOfUsers) || 1,
+          oneTimeFee: Number(values.oneTimeFee) || 0,
+          displayOrder: Number(values.displayOrder) || 0,
+          variants: (values.variants || []).map((v: any) => {
+            const variantObj: any = {
+              name: (v.name || '').trim(),
+              billingCycle: v.billingCycle || 'monthly',
+              durationDays: Number(v.durationDays) || 30,
+              price: Number(v.price) || 0
+            };
+            if (v._id && typeof v._id === 'string' && v._id.trim()) {
+              variantObj._id = v._id.trim();
+            }
+            return variantObj;
+          })
+        };
+
         if (id) {
-          await dispatch(updatePlan({ id, data: values })).unwrap();
+          await dispatch(updatePlan({ id, data: payload })).unwrap();
           dispatch(showNotification({ message: 'Plan updated successfully!' }));
         } else {
-          await dispatch(createPlan(values)).unwrap();
+          await dispatch(createPlan(payload)).unwrap();
           dispatch(showNotification({ message: 'Plan created successfully!' }));
         }
         navigate('/superadmin/plans');
@@ -347,18 +368,54 @@ export default function PlanForm() {
                 <Stack spacing={1.5}>
                   {formik.values.variants.map((v: any, i: number) => (
                     <Box key={i} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.6fr 1.1fr 0.7fr 1fr auto' }, gap: 1.5, alignItems: 'center', p: 1.75, borderRadius: 1.75, border: `1px solid ${BORDER}`, bgcolor: '#fbfcfe', transition: 'border-color .2s ease', '&:hover': { borderColor: alpha(ACCENT, 0.35) } }}>
-                      <TextField size="small" label="Title" placeholder="e.g. Monthly" value={v.name} onChange={(e) => formik.setFieldValue(`variants[${i}].name`, e.target.value)} sx={fieldSx} />
+                      <TextField 
+                        size="small" 
+                        label="Title" 
+                        placeholder="e.g. Monthly" 
+                        value={v.name} 
+                        onChange={(e) => formik.setFieldValue(`variants[${i}].name`, e.target.value)} 
+                        error={Boolean((formik.errors.variants as any)?.[i]?.name && (formik.touched.variants as any)?.[i]?.name)}
+                        helperText={(formik.touched.variants as any)?.[i]?.name && (formik.errors.variants as any)?.[i]?.name}
+                        sx={fieldSx} 
+                      />
 
-                      <TextField size="small" select label="Cycle" value={v.billingCycle} onChange={(e) => formik.setFieldValue(`variants[${i}].billingCycle`, e.target.value)} sx={fieldSx}>
+                      <TextField 
+                        size="small" 
+                        select 
+                        label="Cycle" 
+                        value={v.billingCycle} 
+                        onChange={(e) => formik.setFieldValue(`variants[${i}].billingCycle`, e.target.value)} 
+                        sx={fieldSx}
+                      >
                         <MenuItem value="monthly" sx={{ fontSize: 13.5 }}>Monthly</MenuItem>
+                        <MenuItem value="quarterly" sx={{ fontSize: 13.5 }}>Quarterly</MenuItem>
                         <MenuItem value="half-yearly" sx={{ fontSize: 13.5 }}>Half Yearly</MenuItem>
                         <MenuItem value="yearly" sx={{ fontSize: 13.5 }}>Yearly</MenuItem>
                         <MenuItem value="one-time" sx={{ fontSize: 13.5 }}>One Time</MenuItem>
                       </TextField>
 
-                      <TextField size="small" type="number" label="Days" value={v.durationDays} onChange={(e) => formik.setFieldValue(`variants[${i}].durationDays`, Number(e.target.value))} sx={fieldSx} />
+                      <TextField 
+                        size="small" 
+                        type="number" 
+                        label="Days" 
+                        value={v.durationDays} 
+                        onChange={(e) => formik.setFieldValue(`variants[${i}].durationDays`, e.target.value === '' ? '' : Number(e.target.value))} 
+                        error={Boolean((formik.errors.variants as any)?.[i]?.durationDays && (formik.touched.variants as any)?.[i]?.durationDays)}
+                        helperText={(formik.touched.variants as any)?.[i]?.durationDays && (formik.errors.variants as any)?.[i]?.durationDays}
+                        sx={fieldSx} 
+                      />
 
-                      <TextField size="small" type="number" label="Price" value={v.price} onChange={(e) => formik.setFieldValue(`variants[${i}].price`, Number(e.target.value))} sx={fieldSx} slotProps={{ input: { startAdornment: (<InputAdornment position="start"><Typography sx={{ fontSize: 13.5, color: MUTED, fontWeight: 600 }}>₹</Typography></InputAdornment>) } }} />
+                      <TextField 
+                        size="small" 
+                        type="number" 
+                        label="Price" 
+                        value={v.price} 
+                        onChange={(e) => formik.setFieldValue(`variants[${i}].price`, e.target.value === '' ? '' : Number(e.target.value))} 
+                        error={Boolean((formik.errors.variants as any)?.[i]?.price && (formik.touched.variants as any)?.[i]?.price)}
+                        helperText={(formik.touched.variants as any)?.[i]?.price && (formik.errors.variants as any)?.[i]?.price}
+                        sx={fieldSx} 
+                        slotProps={{ input: { startAdornment: (<InputAdornment position="start"><Typography sx={{ fontSize: 13.5, color: MUTED, fontWeight: 600 }}>₹</Typography></InputAdornment>) } }} 
+                      />
 
                       <Tooltip title="Remove variant" arrow>
                         <IconButton size="small" onClick={() => { const newV = [...formik.values.variants]; newV.splice(i, 1); formik.setFieldValue('variants', newV); }} sx={{ width: 36, height: 36, color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 1.5, bgcolor: SURFACE, '&:hover': { color: '#dc2626', borderColor: '#fecaca', bgcolor: '#fef2f2' } }}>

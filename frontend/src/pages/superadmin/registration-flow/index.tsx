@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Box } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../../../hook";
 import {
@@ -11,12 +12,15 @@ import { showNotification } from "../../../features/notifications/notificationSl
 import RegistrationTable from "./RegistrationTable";
 import RegistrationPipeline from "./RegistrationPipeline";
 import RegistrationModals from "./RegistrationModals";
+import RegisterShopModal from "./RegisterShopModal";
 
 type ViewMode = "table" | "pipeline";
 
 const RegistrationRoot = () => {
+  const [searchParams] = useSearchParams();
+  
   const dispatch = useAppDispatch();
-  const { businesses, plans, admins } = useAppSelector((state) => state.superadmin);
+  const { businesses, plans } = useAppSelector((state) => state.superadmin);
   const loading = useAppSelector((state: any) => state.superadmin?.loading ?? false);
 
   const [view, setView] = useState<ViewMode>("table");
@@ -33,12 +37,7 @@ const RegistrationRoot = () => {
   const [trialPlanId, setTrialPlanId] = useState("");
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoMeetLink, setDemoMeetLink] = useState("");
-
-  const [expandedStages, setExpandedStages] = useState<Record<string, boolean>>({
-    new: false,
-    demo: false,
-    conducted: false,
-  });
+  const [registerModalOpen, setRegisterModalOpen] = useState(false);
 
   const fetchAll = () => {
     dispatch(fetchBusinesses());
@@ -50,18 +49,55 @@ const RegistrationRoot = () => {
     fetchAll();
   }, [dispatch]);
 
-  const toggleStage = (key: string) =>
-    setExpandedStages((prev) => ({ ...prev, [key]: !prev[key] }));
+  useEffect(() => {
+    const bizId = searchParams.get('biz');
+    if (bizId && businesses.length > 0 && !pipelineBiz) {
+      const biz = businesses.find((b: any) => b._id === bizId || b.id === bizId);
+      if (biz) {
+        handleOpenPipeline(biz);
+        setView('pipeline');
+      }
+    }
+  }, [searchParams, businesses]);
 
+  useEffect(() => {
+    let interval: any;
+    if (pipelineBiz?.paymentStatus === 'Pending') {
+      interval = setInterval(() => {
+        dispatch(fetchBusinesses());
+      }, 5000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [pipelineBiz?.paymentStatus, dispatch]);
 
-  const handleOpenPipeline = (biz: any) => {
+  useEffect(() => {
+    if (pipelineBiz) {
+
+      const updatedBiz = businesses.find((b: any) => b._id === pipelineBiz._id || b.id === pipelineBiz._id);
+      if (updatedBiz && (updatedBiz.paymentStatus !== pipelineBiz.paymentStatus || updatedBiz.updatedAt !== pipelineBiz.updatedAt || JSON.stringify(updatedBiz) !== JSON.stringify(pipelineBiz))) {
+        setPipelineBiz(updatedBiz);
+        setSelectedReviewBiz(updatedBiz);
+        
+        const currentReqPlan = updatedBiz.paymentBreakdown?.planId || updatedBiz.requestedPlanId?._id || updatedBiz.planId?._id || updatedBiz.planId || "";
+        const currentReqVariant = updatedBiz.paymentBreakdown?.planVariantId || updatedBiz.planVariantId || "";
+        
+        if (currentReqPlan) setReviewPlanId(currentReqPlan);
+        if (currentReqVariant) setReviewVariantId(currentReqVariant);
+      }
+    }
+  }, [businesses, pipelineBiz]);
+
+const handleOpenPipeline = (biz: any) => {
     setPipelineBiz(biz);
     setSelectedReviewBiz(biz);
     setReviewNote("");
-    const reqPlan = biz.requestedPlanId?._id || "";
+    const reqPlan = biz.paymentBreakdown?.planId || biz.requestedPlanId?._id || biz.planId?._id || biz.planId || "";
     setReviewPlanId(reqPlan);
-    if (biz.planVariantId) {
-      setReviewVariantId(biz.planVariantId);
+    const reqVariant = biz.paymentBreakdown?.planVariantId || biz.planVariantId || "";
+    if (reqVariant) {
+      setReviewVariantId(reqVariant);
     } else if (reqPlan) {
       const p = plans.find((p: any) => p._id === reqPlan);
       if (p?.variants?.length) {
@@ -80,15 +116,6 @@ const RegistrationRoot = () => {
   const handleBackToTable = () => {
     setPipelineBiz(null);
     setView("table");
-  };
-
-  const handleOpenReview = (biz: any) => {
-    setSelectedReviewBiz(biz);
-    setReviewNote("");
-    setReviewPlanId(biz.requestedPlanId?._id || "");
-    const autoLink = `https://meet.google.com/phu-sbez-ufu`;
-    setDemoMeetLink(biz.onboardingMeetLink || autoLink);
-    setReviewModalOpen(true);
   };
 
   const handleRequestChanges = () => {
@@ -208,7 +235,18 @@ const RegistrationRoot = () => {
       .catch((error: any) => dispatch(showNotification({ message: error?.message || "Failed to delete business", failure: true })));
   };
 
+  const handleDeleteFromTable = (biz: any) => {
+    dispatch(deleteBusiness(biz._id || biz.id))
+      .unwrap()
+      .then(() => {
+        dispatch(showNotification({ message: `Shop "${biz.name || biz.ownerName || 'Shop'}" deleted successfully` }));
+        fetchAll();
+      })
+      .catch((error: any) => dispatch(showNotification({ message: error?.message || "Failed to delete shop", failure: true })));
+  };
+
   const pendingBusinesses = businesses?.filter((b: any) =>
+    !b.isDemoAccount &&
     ["Pending", "ChangesRequested"].includes(b.verificationStatus)
   ) || [];
 
@@ -219,6 +257,8 @@ const RegistrationRoot = () => {
           businesses={pendingBusinesses}
           loading={loading && !businesses}
           onOpenPipeline={handleOpenPipeline}
+          onOpenRegisterModal={() => setRegisterModalOpen(true)}
+          onDeleteShop={handleDeleteFromTable}
         />
       ) : (
         <RegistrationPipeline
@@ -269,6 +309,12 @@ const RegistrationRoot = () => {
         handleReject={handleReject}
         handleAskToReRegister={handleAskToReRegister}
         handleActivateTrial={handleActivateTrial}
+      />
+
+      <RegisterShopModal
+        open={registerModalOpen}
+        onClose={() => setRegisterModalOpen(false)}
+        plans={plans}
       />
     </Box>
   );
